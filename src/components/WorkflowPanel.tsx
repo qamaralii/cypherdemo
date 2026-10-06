@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import { config } from '../config';
 import { InstagramPostCard } from './InstagramPostCard';
 import { BatchLabelScan } from './BatchLabelScan';
 import { SocialMediaAgentRun } from './SocialMediaAgentRun';
 import { RcaAgentRun, rcaTaskIndex } from './RcaAgentRun';
+import { OrchestratorGraph, ORCHESTRATOR_PLAN_STARTS } from './OrchestratorGraph';
 
 export type WorkflowStage =
   | 'socialMedia'
@@ -20,7 +21,7 @@ export type WorkflowStage =
 
 export const AUTO_STAGE_DURATIONS: Partial<Record<WorkflowStage, number>> = {
   socialMedia: 19_000,
-  orchestrator: 8_000,
+  orchestrator: 12_500,
   identification: 20_000,
   rca: 22_000,
 };
@@ -205,29 +206,22 @@ function ApprovalFeedback({ stage, regions: selectedRegions, channels, compensat
 }
 
 function OrchestratorVisual({ progress, ready, onAdvance, paused }: Pick<Props, 'onAdvance' | 'paused'> & { progress: number; ready: boolean }) {
-  const batchReady = progress >= 0.2 || ready;
-  const causeReady = progress >= 0.45 || ready;
-  const responseReady = progress >= 0.7 || ready;
-  const graphSources = [
-    { id: 'social', label: 'Customer & Social', detail: 'Post · tag · contact', glyph: '⌁', x: 88, y: 62, active: batchReady, tier: 'inner', satellites: 3 },
-    { id: 'product', label: 'Product & Batch', detail: 'HLD-2407-A · label', glyph: '▦', x: 220, y: 38, active: batchReady, tier: 'inner', satellites: 3 },
-    { id: 'manufacturing', label: 'Manufacturing', detail: 'Line 4 · shift', glyph: '⚙', x: 202, y: 122, active: batchReady, tier: 'inner', satellites: 2 },
-    { id: 'quality', label: 'Quality', detail: 'Seal logs · hold', glyph: '◉', x: 434, y: 42, active: causeReady, tier: 'inner', satellites: 3 },
-    { id: 'warehouse', label: 'Warehouse', detail: 'Cartons · dispatches', glyph: '▤', x: 552, y: 112, active: causeReady, tier: 'middle', satellites: 3 },
-    { id: 'retail', label: 'Retail Exposure', detail: '40 stores · 7 cities', glyph: '⌖', x: 510, y: 232, active: causeReady, tier: 'middle', satellites: 3 },
-    { id: 'sales', label: 'Sales', detail: 'Affected range', glyph: '◫', x: 392, y: 274, active: causeReady, tier: 'middle', satellites: 2 },
-    { id: 'compliance', label: 'Compliance', detail: 'Recall · reporting', glyph: '§', x: 270, y: 275, active: responseReady, tier: 'outer', satellites: 3 },
-    { id: 'care', label: 'Customer Care', detail: 'Sarah case · support', glyph: '♥', x: 135, y: 242, active: responseReady, tier: 'outer', satellites: 2 },
-    { id: 'comms', label: 'Communications', detail: 'Statement · channels', glyph: '✉', x: 76, y: 157, active: responseReady, tier: 'outer', satellites: 3 },
-  ];
+  const elapsedSeconds = ready ? 12.5 : progress * 12.5;
+  const graphComplete = elapsedSeconds >= 8;
+  const graphProgress = Math.min(1, elapsedSeconds / 8);
+  const time = Math.max(0, elapsedSeconds - 8);
   const planItems = [
-    ['Confirm the exact product batch', 'HLD-2407-A identified from Sarah’s post', batchReady],
-    ['Find the cause and affected stores', 'Check Line 4 logs and trace all deliveries', causeReady],
-    ['Prepare clear response choices', 'Withdraw stock, inform customers, and support Sarah', responseReady],
+    ['Confirm the exact product batch', 'HLD-2407-A identified from Sarah’s post'],
+    ['Find the cause and affected stores', 'Check Line 4 logs and trace all deliveries'],
+    ['Prepare clear response choices', 'Withdraw stock, inform customers, and support Sarah'],
   ] as const;
-  const activePlanIndex = planItems.findIndex(([, , drafted]) => !drafted);
-  const visiblePlanItems = planItems.slice(0, ready ? 3 : responseReady ? 3 : causeReady ? 2 : batchReady ? 1 : 0);
-  return <div className="orchestrator-workspace"><svg className={`orchestrator-graph${responseReady ? ' plan-ready' : ''}`} viewBox="0 0 640 310" role="img" aria-label="Semantic context graph connecting incident evidence sources"><defs><radialGradient id="incident-core-glow"><stop stopColor="#d96239" stopOpacity=".22" /><stop offset="1" stopColor="#d96239" stopOpacity="0" /></radialGradient></defs><g className="semantic-field"><ellipse cx="320" cy="156" rx="112" ry="78" /><ellipse cx="320" cy="156" rx="186" ry="117" /><ellipse cx="320" cy="156" rx="266" ry="146" /></g><g className="semantic-edges">{graphSources.map((source) => <path key={source.id} className={source.active ? 'active' : ''} d={`M${source.x} ${source.y} Q${(source.x + 320) / 2} ${(source.y + 156) / 2 - 18} 320 156`} />)}</g><g className={`semantic-core${responseReady ? ' ready' : ''}`}><circle cx="320" cy="156" r="63" /><circle cx="320" cy="156" r="43" /><circle cx="320" cy="156" r="25" /><text className="core-kicker" x="320" y="145" textAnchor="middle">ACTIVE INCIDENT</text><text className="core-batch" x="320" y="162" textAnchor="middle">HLD-2407-A</text><text className="core-detail" x="320" y="178" textAnchor="middle">{responseReady ? 'Plan ready' : 'Customer complaint'}</text></g>{graphSources.map((source, sourceIndex) => { const labelAbove = source.y > 210; const labelY = source.y + (labelAbove ? -31 : 35); const detailY = source.y + (labelAbove ? -20 : 46); return <g key={source.id} className={`semantic-source tier-${source.tier}${source.active ? ' active' : ''}`} style={{ '--source-x': source.x, '--source-y': source.y } as CSSProperties}>{Array.from({ length: source.satellites }, (_, satelliteIndex) => { const angle = sourceIndex * .66 + satelliteIndex * (Math.PI * 2 / source.satellites); const sx = source.x + Math.cos(angle) * 31; const sy = source.y + Math.sin(angle) * 25; return <g key={satelliteIndex}><line className="source-satellite-edge" x1={source.x} y1={source.y} x2={sx} y2={sy} /><circle className="source-satellite" cx={sx} cy={sy} r="2.6" /></g>; })}<circle className="source-halo" cx={source.x} cy={source.y} r="25" /><circle className="source-mark" cx={source.x} cy={source.y} r="17" /><text className="source-glyph" x={source.x} y={source.y + 4} textAnchor="middle">{source.glyph}</text><text className="source-label" x={source.x} y={labelY} textAnchor="middle">{source.label}</text><text className="source-detail" x={source.x} y={detailY} textAnchor="middle">{source.detail}</text></g>; })}</svg><section className="orchestrator-plan merged-approval"><ApprovalHeading title="Approve the incident plan" />{visiblePlanItems.length === 0 && <p className="orchestrator-gathering">Gathering connected evidence…</p>}{visiblePlanItems.map(([title, detail, drafted], index) => <div key={title} className={`${drafted ? 'drafted' : ''}${activePlanIndex === index && !ready ? ' active' : ''}`}><i>{index + 1}</i><p><b>{title}</b><small>{detail}</small></p><em>{drafted ? 'Drafted' : 'Drafting'}</em></div>)}<button className="approval-action" disabled={paused || !ready} onClick={onAdvance}>{ready ? 'Approve plan' : 'Preparing incident plan'} →</button></section></div>;
+  const visiblePlanItems = planItems.filter((_, i) => time >= ORCHESTRATOR_PLAN_STARTS[i]);
+  return <div className="orchestrator-workspace"><OrchestratorGraph progress={graphProgress} ready={graphComplete} /><section className="orchestrator-plan merged-approval" style={{ visibility: graphComplete ? 'visible' : 'hidden' }} inert={!graphComplete}><ApprovalHeading title="Approve the incident plan" />{visiblePlanItems.map(([title, detail], index) => {
+    const elapsed = time - ORCHESTRATOR_PLAN_STARTS[index];
+    const drafted = elapsed >= 1.2;
+    const typed = title.slice(0, Math.round(Math.max(0, Math.min(1, (elapsed - .15) / .9)) * title.length));
+    return <div key={title} className={drafted ? 'drafted' : 'active'}><i>{index + 1}</i><p><b className="orchestrator-typed-title"><span aria-hidden="true">{title}</span><span>{typed}</span></b><small>{elapsed >= .8 ? detail : '\u00a0'}</small></p><em>{drafted ? '✓ Drafted' : 'Drafting'}</em></div>;
+  })}<button className="approval-action" disabled={paused || !ready} onClick={onAdvance}>{ready ? 'Approve plan' : 'Preparing incident plan'} →</button></section></div>;
 }
 
 function ResolutionVisual({ progress, decision, onChoose, onAdvance, paused }: { progress: number; decision: Decision | null; onChoose: (decision: Decision) => void; onAdvance: () => void; paused: boolean }) {
