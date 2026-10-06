@@ -1,3 +1,5 @@
+import { DislikeIcon } from './DislikeIcon';
+
 export interface InstagramPostData {
   customerName: string;
   customerHandle: string;
@@ -36,7 +38,7 @@ export function InstagramPostCard({ post, imageSrc, reactionCount }: Props) {
       <div className="sp-image bg-gray-100"><img src={imageSrc} alt="Customer social post" className="w-full aspect-square object-cover block" /></div>
       <div className="sp-actions-row flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-4">
-          {isDislike ? <img src={`${import.meta.env.BASE_URL}assets/dislike.svg`} width="26" height="26" alt="Dislike" className="cursor-pointer" /> : <svg width="26" height="26" viewBox="0 0 24 24" fill="#ed4956" className="cursor-pointer" aria-label="Like"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>}
+          {isDislike ? <DislikeIcon size={26} className="cursor-pointer" /> : <svg width="26" height="26" viewBox="0 0 24 24" fill="#ed4956" className="cursor-pointer" aria-label="Like"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>}
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="text-black cursor-pointer"><path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22z" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="text-black cursor-pointer"><line x1="22" y1="2" x2="11" y2="13" strokeLinecap="round" strokeLinejoin="round" /><polygon points="22 2 15 22 11 13 2 9 22 2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </div>
