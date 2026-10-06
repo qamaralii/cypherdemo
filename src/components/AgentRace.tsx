@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { IncidentHeader } from './IncidentHeader';
-import { HumanPanel, HUMAN_MESSAGE_COUNT } from './HumanPanel';
+import { HumanPanel, HumanInvestigationReport, HUMAN_MESSAGE_COUNT } from './HumanPanel';
+import { ComparisonRail } from './ComparisonRail';
 import { WorkflowPanel } from './WorkflowPanel';
 import type { WorkflowStage } from './WorkflowPanel';
 import { config } from '../config';
 import type { HopTarget } from '../hooks/useSceneController';
 import './race.css';
+import './comparison.css';
 
 type HumanStage = 'intro' | 'running' | 'summary';
 type Decision = typeof config.agentRace.decisions[number];
@@ -37,12 +39,25 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   const [compensation, setCompensation] = useState<'Hamper' | 'Voucher'>('Hamper');
   const [approvalFeedback, setApprovalFeedback] = useState<WorkflowStage | null>(null);
   const approvalTimeline = useRef<gsap.core.Timeline | null>(null);
+  const [viewingHumanReport, setViewingHumanReport] = useState(false);
+  const [comparisonElapsed, setComparisonElapsed] = useState(0);
+  const comparisonElapsedRef = useRef(0);
+  const comparisonRef = useRef<HTMLDivElement>(null);
+  const workflowPaused = paused || viewingHumanReport;
+  const toggleReport = useCallback(() => {
+    // Move focus off the outgoing view before it becomes inert.
+    comparisonRef.current?.focus({ preventScroll: true });
+    setViewingHumanReport(current => !current);
+  }, []);
 
   const handleHumanComplete = useCallback(() => {
     setHumanStage('summary');
   }, []);
 
   const startWorkflow = useCallback(() => {
+    setViewingHumanReport(false);
+    comparisonElapsedRef.current = 0;
+    setComparisonElapsed(0);
     setWorkflowStage('socialMedia');
     setDecision(null);
     setRegions(allRegions);
@@ -98,8 +113,29 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   }, [approvalFeedback, advanceWorkflow]);
 
   useEffect(() => {
-    approvalTimeline.current?.paused(paused);
-  }, [paused]);
+    approvalTimeline.current?.paused(workflowPaused);
+  }, [workflowPaused, approvalFeedback]);
+
+  useEffect(() => {
+    if (!workflowStage || workflowStage === 'outcome' || workflowPaused) return;
+    let previous = performance.now();
+    const interval = window.setInterval(() => {
+      const now = performance.now();
+      comparisonElapsedRef.current += now - previous;
+      previous = now;
+      setComparisonElapsed(comparisonElapsedRef.current);
+    }, 100);
+    return () => window.clearInterval(interval);
+  }, [workflowStage, workflowPaused]);
+
+  useEffect(() => {
+    if (!viewingHumanReport) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') toggleReport();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [viewingHumanReport, toggleReport]);
 
   const toggleRegion = useCallback((region: Region) => {
     setRegions((current) => current.includes(region) ? current.filter((item) => item !== region) : [...current, region]);
@@ -109,6 +145,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   }, []);
 
   const handleNext = useCallback(() => {
+    if (viewingHumanReport) return true;
     if (!workflowStage) {
       if (humanStage === 'intro') {
         setHumanMessageIndex(0);
@@ -122,9 +159,10 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     if (['orchestratorApproval', 'resolution', 'recall', 'comms', 'support', 'outcome'].includes(workflowStage)) return true;
     advanceWorkflow();
     return true;
-  }, [workflowStage, humanStage, humanMessageIndex, advanceWorkflow]);
+  }, [workflowStage, humanStage, humanMessageIndex, advanceWorkflow, viewingHumanReport]);
 
   const handlePrev = useCallback(() => {
+    if (viewingHumanReport) return true;
     if (!workflowStage) {
       if (humanStage === 'intro') return false;
       if (humanStage === 'summary') {
@@ -148,7 +186,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     const target = previous[workflowStage];
     if (target) setWorkflowStage(target);
     return true;
-  }, [workflowStage, humanStage, humanMessageIndex, decision]);
+  }, [workflowStage, humanStage, humanMessageIndex, decision, viewingHumanReport]);
 
   useEffect(() => {
     registerNextHandler?.(handleNext);
@@ -161,6 +199,9 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
 
   useEffect(() => {
     if (!hopTarget) return;
+    setViewingHumanReport(false);
+    comparisonElapsedRef.current = 0;
+    setComparisonElapsed(0);
     const full = config.agentRace.decisions[0]!;
     const targetMap: Record<Exclude<HopTarget, 'humanStart' | 'humanEnd'>, WorkflowStage> = {
        unstructuredStart: 'socialMedia', analysisStart: 'orchestrator', resolutionGate: 'identification', diagnosis: 'rca', decision: 'resolution', execution: 'recall', outcome: 'outcome',
@@ -200,9 +241,12 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
           </aside>
         </div>
       ) : (
+        <div ref={comparisonRef} className="workflow-comparison" data-view={viewingHumanReport ? 'human' : 'agent'} tabIndex={-1}>
+        <div id="comparison-agent-view" className="comparison-agent-view" inert={viewingHumanReport} aria-hidden={viewingHumanReport}>
+        <ComparisonRail team="human" elapsed={820 / 1440 + comparisonElapsed / 30_000} onClick={toggleReport} expanded={viewingHumanReport} />
         <WorkflowPanel
           stage={workflowStage}
-          paused={paused}
+          paused={workflowPaused}
           decision={decision}
           regions={regions}
           publicDraft={publicDraft}
@@ -220,6 +264,12 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
           onCustomerDraft={setCustomerDraft}
           onCompensation={setCompensation}
         />
+        </div>
+        <div id="comparison-human-view" className="comparison-human-view" inert={!viewingHumanReport} aria-hidden={!viewingHumanReport}>
+          <div className="comparison-report-scroll"><HumanInvestigationReport /></div>
+          <ComparisonRail team="agent" elapsed={comparisonElapsed / 30_000} onClick={toggleReport} />
+        </div>
+        </div>
       )}
       <footer className="race-footnote"><span>ILLUSTRATIVE SCENARIO <b>·</b> Timings are simulated and compressed for this demo.</span><button onClick={onReplay}>↺ Replay experience</button></footer>
     </main>

@@ -304,3 +304,13 @@ function renderMentions(message: string) {
     part.startsWith('@') ? <mark key={`${part}-${i}`}>{part}</mark> : part,
   );
 }
+
+export function HumanInvestigationReport() {
+  return <article className="comparison-human-report">
+    <header><span className="race-eyebrow">HUMAN TEAMS · INVESTIGATION REPORT</span><h2>{config.agentRace.humanSummary.headline}</h2><p>Recorded investigation snapshot · batch HLD-2407-A</p></header>
+    <div className="human-summary-metrics"><div><strong>13 hrs 40 mins</strong><span>Recorded elapsed time</span></div><div><strong>15</strong><span>Handoffs</span></div><div><strong>16</strong><span>Messages</span></div><div><strong>10</strong><span>People involved</span></div></div>
+    <small className="human-summary-caption">Full incident totals · selected exchanges shown below</small>
+    <div className="human-summary-explained"><p>✓ {config.agentRace.humanSummary.confirmed}</p><p>◌ {config.agentRace.humanSummary.unresolved}</p></div>
+    <details className="comparison-human-exchanges"><summary>View human exchanges <span>{messages.length} selected messages</span></summary><div>{messages.map(message => <article key={`${message.timestamp}-${message.name}`} className="colleague-message"><span className="colleague-avatar">{message.initials}</span><div className="message-body"><div className="message-author"><strong>{message.name}</strong><span>{message.role}</span><time>{message.timestamp}</time></div><p>{renderMentions(message.message)}</p>{message.attachment && <div className="channel-attachment"><span className="file-icon">▤</span><div><strong>{message.attachment}</strong><small>{message.attachmentStatus}</small></div></div>}<div className="message-status"><span />{message.status}</div></div></article>)}</div></details>
+  </article>;
+}
