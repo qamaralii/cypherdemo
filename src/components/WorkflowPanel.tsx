@@ -148,7 +148,7 @@ export function WorkflowPanel(props: Props) {
 
         <aside className="workflow-right-column" aria-live="polite">
           <div className="workflow-product-window">
-            <div className="workflow-product-rail"><img src="/assets/intugle-logo.svg" alt="Intugle" /><span>AI</span></div>
+            <div className="workflow-product-rail"><img src="/assets/intugle-icon.svg" alt="Intugle" /><span>AI</span></div>
             <div className="workflow-visual">
               <header><span>{visualLabel(stage)}</span><small>{stage === 'outcome' ? 'AUDIT TRAIL COMPLETE' : 'LIVE WORKSPACE'}</small></header>
               {stage === 'socialMedia' && <SocialMediaAgentRun progress={visualProgress} />}
