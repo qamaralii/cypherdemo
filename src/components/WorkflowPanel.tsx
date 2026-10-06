@@ -241,12 +241,13 @@ function SupportVisual({ progress, draft, compensation, onDraft, onCompensation,
 }
 
 function OutcomeVisual({ decision, selectedStores, compensation, showCustomerUpdate, onViewCustomerUpdate, onBackToOutcome }: { decision: Decision | null; selectedStores: number; compensation: 'Hamper' | 'Voucher'; showCustomerUpdate: boolean; onViewCustomerUpdate: () => void; onBackToOutcome: () => void }) {
-  if (showCustomerUpdate && decision?.id === 'full') {
+  const hasCustomerResponse = decision?.id === 'full' || decision?.id === 'recall';
+  if (showCustomerUpdate && hasCustomerResponse) {
     const update = compensation === 'Voucher' ? config.agentRace.voucherUpdate : config.agentRace.customerUpdate;
     return <div className="customer-appreciation"><button onClick={onBackToOutcome}>← Back to outcome</button><article className="ig-card instagram-embedded"><InstagramPostCard post={update} imageSrc={compensation === 'Voucher' ? config.assets.voucher : config.assets.hamper} reactionCount={update.counters.likes} /></article></div>;
   }
   if (decision?.id === 'nothing') return <div className="workflow-outcome bad"><span>NO ACTION TAKEN</span><strong>FreshMart delists the product range</strong><p>Supplier products removed from stores. Public complaint is trending. A formal health-authority investigation has opened.</p></div>;
-  return <div className="workflow-outcome"><span>APPROVED ACTIONS COMPLETED</span><strong>{decision?.id === 'recall' ? 'Stock withdrawn. Public concern remains.' : 'Incident resolved with evidence and care.'}</strong><p>{selectedStores || 40} stores received withdrawal orders. {decision?.id === 'full' ? `Sarah received an approved ${compensation.toLowerCase()} and a direct response.` : 'No public statement was issued.'}</p>{decision?.id === 'full' && <button className="outcome-customer-update" onClick={onViewCustomerUpdate}>View Sarah&apos;s update →</button>}</div>;
+  return <div className="workflow-outcome"><span>APPROVED ACTIONS COMPLETED</span><strong>{decision?.id === 'recall' ? 'Stock withdrawn. Public concern remains.' : 'Incident resolved with evidence and care.'}</strong><p>{selectedStores || 40} stores received withdrawal orders. {hasCustomerResponse && `Sarah received an approved ${compensation.toLowerCase()} and a direct response.`}{decision?.id === 'recall' && ' No public statement was issued.'}</p>{hasCustomerResponse && <button className="outcome-customer-update" onClick={onViewCustomerUpdate}>View Sarah&apos;s update →</button>}</div>;
 }
 
 function useStageProgress(stage: WorkflowStage, paused: boolean) {
