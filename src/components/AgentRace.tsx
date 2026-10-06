@@ -22,7 +22,6 @@ interface Props {
   registerPrevHandler?: (handler: (() => boolean) | null) => void;
 }
 
-const allRegions: Region[] = ['North', 'South', 'East', 'West', 'Central'];
 const defaultPublicDraft = 'Dear Customers,\n\nWe sincerely apologise for the concern and inconvenience caused by the quality issue affecting YummChips batch HLD-2407-A. Our investigation identified a sealing-temperature deviation during production, and we have issued withdrawal orders to the affected stores.\n\nCustomers who purchased this batch should not consume the product and should contact our customer care team for assistance. We are addressing the production issue and will provide further updates as verified information becomes available. Product quality and customer trust remain our priorities.\n\nYours sincerely,\nThe YummChips Team';
 const defaultCustomerDraft = 'Hi Sarah, thank you for bringing this to our attention. We are sorry for your experience. We have identified the affected batch, withdrawn stock, and would like to make this right for you.';
 
@@ -31,10 +30,10 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   const [humanMessageIndex, setHumanMessageIndex] = useState(0);
   const [humanJumpMessage, setHumanJumpMessage] = useState<{ step: number; id: number }>();
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage | null>(null);
-  const [decision, setDecision] = useState<Decision | null>(null);
-  const [regions, setRegions] = useState<Region[]>(allRegions);
+  const [decision, setDecision] = useState<Decision | null>(config.agentRace.decisions[0]!);
+  const [regions, setRegions] = useState<Region[]>(['North']);
   const [publicDraft, setPublicDraft] = useState(defaultPublicDraft);
-  const [channels, setChannels] = useState(['Website', 'Instagram', 'Email']);
+  const [channels, setChannels] = useState(['Website']);
   const [customerDraft, setCustomerDraft] = useState(defaultCustomerDraft);
   const [compensation, setCompensation] = useState<'Hamper' | 'Voucher'>('Hamper');
   const [approvalFeedback, setApprovalFeedback] = useState<WorkflowStage | null>(null);
@@ -59,10 +58,10 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     comparisonElapsedRef.current = 0;
     setComparisonElapsed(0);
     setWorkflowStage('socialMedia');
-    setDecision(null);
-    setRegions(allRegions);
+    setDecision(config.agentRace.decisions[0]!);
+    setRegions(['North']);
     setPublicDraft(defaultPublicDraft);
-    setChannels(['Website', 'Instagram', 'Email']);
+    setChannels(['Website']);
     setCustomerDraft(defaultCustomerDraft);
     setCompensation('Hamper');
   }, []);
@@ -237,7 +236,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
             <span>01 / HUMAN COORDINATION</span>
             <h2>{humanStage === 'intro' ? 'Watch the handoffs multiply.' : 'A complaint becomes a chain of delays.'}</h2>
             <p>Messages, access requests and spreadsheets move between people while the customer waits for an answer.</p>
-            {humanStage === 'intro' && <button onClick={() => setHumanStage('running')}>Start human simulation →</button>}
+            {humanStage === 'intro' && <button data-enter-primary onClick={() => setHumanStage('running')}>Start human simulation →</button>}
           </aside>
         </div>
       ) : (
