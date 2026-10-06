@@ -43,7 +43,6 @@ export function VideoScene({
   const { visibleItems: visibleAnnotations, currentTime } = useVideoSync(videoRef, annotations);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [isMuted, setIsMuted] = useState(muted);
   const [videoPlane, setVideoPlane] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const hasEndedRef = useRef(false);
   const pausedRef = useRef(paused);
@@ -243,7 +242,7 @@ export function VideoScene({
         ref={videoRef}
         src={src}
         loop={loop}
-        muted={isMuted}
+        muted={muted}
         playsInline
         preload="auto"
         className="absolute inset-0 w-full h-full object-cover"
@@ -441,28 +440,6 @@ export function VideoScene({
         );
       })}
 
-      {/* Sound toggle */}
-      <button
-        className="absolute bottom-4 right-4 z-30 w-10 h-10 flex items-center justify-center
-                   rounded-full bg-navy/60 text-cream/80 hover:text-cream hover:bg-navy/80
-                   transition-colors cursor-pointer backdrop-blur-sm"
-        onClick={() => setIsMuted((m) => !m)}
-        aria-label={isMuted ? 'Unmute' : 'Mute'}
-      >
-        {isMuted ? (
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            <line x1="23" y1="9" x2="17" y2="15" />
-            <line x1="17" y1="9" x2="23" y2="15" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-          </svg>
-        )}
-      </button>
     </div>
   );
 }
