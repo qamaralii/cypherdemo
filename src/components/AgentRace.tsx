@@ -31,6 +31,9 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   const [humanJumpMessage, setHumanJumpMessage] = useState<{ step: number; id: number }>();
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage | null>(null);
   const [decision, setDecision] = useState<Decision | null>(config.agentRace.decisions[0]!);
+  useEffect(() => {
+    if (workflowStage === 'resolution') setDecision(config.agentRace.decisions[0]!);
+  }, [workflowStage]);
   const [regions, setRegions] = useState<Region[]>(['North']);
   const [publicDraft, setPublicDraft] = useState(defaultPublicDraft);
   const [channels, setChannels] = useState(['Website']);
