@@ -1,0 +1,53 @@
+Demo Narration Script
+
+Opening screen
+1. “Every food-safety incident starts small. One packet, one complaint, one very uncomfortable question: how far did it travel?”
+
+Factory scene, F1
+2. “Here’s the source. On Line 4, the sealing temperature drops from 160 to 134 degrees for 18 minutes. Not ideal. The batch still passes through without a quality hold, because apparently this carton chose chaos.”
+
+Distribution scene, F2
+3.“Those affected cartons are dispatched and delivered across 40 FreshMart stores. At this point, the issue is no longer sitting neatly in a factory. It is out in the wild.”
+
+Customer discovery, F3
+4.“Then Sarah finds mould in a packet. This is the moment a production defect becomes a customer incident.”
+Social complaint
+
+5.“Sarah posts about it. The complaint gains attention, and now the business needs answers quickly, clearly, and with evidence.”
+
+Human coordination
+6. “This is how the response often begins: QA asks Plant. Plant asks Supply Chain. Supply Chain needs access. Analytics gets a spreadsheet with creative column names.”
+7. “Four hours and 32 minutes later, the batch is confirmed, but the root cause and full store exposure are still unresolved. Everyone is working. The answer is not.”
+
+Transition to agents
+8.“Now, let’s give the same incident to Intugle.”
+
+Agent introduction
+9.“Three agents start from the same customer complaint, but instead of passing context from team to team, they connect the evidence directly.”
+
+Unstructured Agent
+10.“First, the Unstructured Agent turns Sarah’s image and complaint into usable incident evidence. It identifies the affected batch and links it to production data.”
+
+Analysis Agent
+11.“Next, the Analysis Agent connects quality, warehouse, and sales records. It finds the temperature deviation, confirms the release path, and traces the exposure to 40 stores.”
+
+Approval gate
+12.“The Resolution Agent needs read-only access to compliance rules. Intugle does not quietly help itself to restricted information. Sensible.”
+
+Diagnosis
+13. “Now we have an evidence-backed diagnosis: batch HLD-2407-A, an 18-minute sealing-temperature deviation, and exposure across 40 stores.”
+
+Decision console
+14.“Intugle presents response options. The recommendation is to withdraw the affected stock and publish a clear customer statement. The system prepares the work; a person approves the response.”
+
+Execution
+15.“Once approved, response agents execute in sequence. One notifies stores and withdraws stock. One prepares and publishes the statement. One resolves the customer case and refund.”
+
+Outcome
+16.“In approximately 47 simulated seconds, the business moves from a viral complaint to a governed, evidence-backed response.”
+
+Customer update
+17.“And Sarah gets the update that matters: the issue was taken seriously, the right action was taken, and someone actually followed through.”
+
+Close
+18.“Intugle helps teams move from incident noise to connected evidence, responsible decisions, and action. Faster, without skipping the human judgment.”
