@@ -79,7 +79,7 @@ Social Media Agent
 
 - Social Media: post slides in before blue mention highlights; three matching green result cards use animated ticks. Customer outreach includes collected contact details. Stage lasts 19 seconds, with outreach at 4.5 seconds, contact verification at 10 seconds, handoff at 15 seconds, and a final 4-second hold. Launch opens this stage directly.
 - Orchestrator: drafts a three-line incident plan in 8 seconds, then requires plan approval.
-- Identification: detects packaging label, shows real enlarged label crop, extracts `HLD-2407-A`, and queries the production database.
+- Identification: uses `BatchLabelScan.tsx`, adapted from `Batch Label Scan/index.html`. A dusty-blue beam scans the complaint photo; the frame narrows from packaging to printed label, a genuine label crop lifts out, OCR characters lock, and the code travels into the result chip and database. A muted-green match opens Line 4 / 08 July details. Total stage: 20 seconds (16-second animation, 4-second final hold). Geometry respects cover cropping and recalculates on resize without resetting stage progress.
 - RCA: scans stable factory logs, locks red anomalies, correlates the batch to the 160C -> 134C drop, then maps 40 affected stores across 7 UK cities.
 - Response Planning: reveals evidence and three response options together; no intermediate review page.
 - Recall: selects all or chosen North/South/East/West/Central regions, then issues withdrawal orders.

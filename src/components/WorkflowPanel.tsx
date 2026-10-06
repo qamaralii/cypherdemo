@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
 import { config } from '../config';
 import { InstagramPostCard } from './InstagramPostCard';
+import { BatchLabelScan } from './BatchLabelScan';
 
 export type WorkflowStage =
   | 'socialMedia'
@@ -84,7 +85,9 @@ export function WorkflowPanel(props: Props) {
   useEffect(() => {
     if (!paused && progress >= 1 && AUTO_STAGE_DURATIONS[stage]) onAdvance();
   }, [stage, progress, paused, onAdvance]);
-   const activeTaskIndex = Math.min(2, Math.floor(progress * 3));
+   const activeTaskIndex = stage === 'identification'
+     ? visualProgress >= .8 ? 3 : visualProgress >= 5.7 / 12 ? 2 : visualProgress >= 3.75 / 12 ? 1 : 0
+     : Math.min(2, Math.floor(progress * 3));
    const preparing = ['resolution', 'recall', 'comms', 'support'].includes(stage) && progress < 1;
    const controlsPaused = paused || preparing || Boolean(approvalFeedback);
   const runColumnRef = useRef<HTMLDivElement>(null);
@@ -143,7 +146,7 @@ export function WorkflowPanel(props: Props) {
               <header><span>{visualLabel(stage)}</span><small>{stage === 'outcome' ? 'AUDIT TRAIL COMPLETE' : 'LIVE WORKSPACE'}</small></header>
               {stage === 'socialMedia' && <SocialVisual progress={visualProgress} />}
               {(stage === 'orchestrator' || stage === 'orchestratorApproval') && <OrchestratorVisual progress={visualProgress} ready={stage === 'orchestratorApproval'} onAdvance={() => props.onApproval('orchestratorApproval')} paused={paused || Boolean(approvalFeedback)} />}
-              {stage === 'identification' && <IdentificationVisual progress={visualProgress} />}
+              {stage === 'identification' && <BatchLabelScan progress={visualProgress} />}
               {stage === 'rca' && <RcaVisual progress={visualProgress} />}
               {stage === 'resolution' && <ResolutionVisual progress={progress} decision={decision} onChoose={props.onChooseDecision} onAdvance={props.onAdvance} paused={controlsPaused} />}
               {stage === 'recall' && <RecallVisual progress={progress} selectedRegions={selectedRegions} selectedStores={selectedStores} onToggle={props.onToggleRegion} onSetRegions={props.onSetRegions} onAdvance={() => props.onApproval('recall')} paused={controlsPaused} />}
@@ -257,35 +260,6 @@ function OrchestratorVisual({ progress, ready, onAdvance, paused }: Pick<Props, 
   const activePlanIndex = planItems.findIndex(([, , drafted]) => !drafted);
   const visiblePlanItems = planItems.slice(0, ready ? 3 : responseReady ? 3 : causeReady ? 2 : batchReady ? 1 : 0);
   return <div className="orchestrator-workspace"><svg className={`orchestrator-graph${responseReady ? ' plan-ready' : ''}`} viewBox="0 0 640 310" role="img" aria-label="Semantic context graph connecting incident evidence sources"><defs><radialGradient id="incident-core-glow"><stop stopColor="#d96239" stopOpacity=".22" /><stop offset="1" stopColor="#d96239" stopOpacity="0" /></radialGradient></defs><g className="semantic-field"><ellipse cx="320" cy="156" rx="112" ry="78" /><ellipse cx="320" cy="156" rx="186" ry="117" /><ellipse cx="320" cy="156" rx="266" ry="146" /></g><g className="semantic-edges">{graphSources.map((source) => <path key={source.id} className={source.active ? 'active' : ''} d={`M${source.x} ${source.y} Q${(source.x + 320) / 2} ${(source.y + 156) / 2 - 18} 320 156`} />)}</g><g className={`semantic-core${responseReady ? ' ready' : ''}`}><circle cx="320" cy="156" r="63" /><circle cx="320" cy="156" r="43" /><circle cx="320" cy="156" r="25" /><text className="core-kicker" x="320" y="145" textAnchor="middle">ACTIVE INCIDENT</text><text className="core-batch" x="320" y="162" textAnchor="middle">HLD-2407-A</text><text className="core-detail" x="320" y="178" textAnchor="middle">{responseReady ? 'Plan ready' : 'Customer complaint'}</text></g>{graphSources.map((source, sourceIndex) => { const labelAbove = source.y > 210; const labelY = source.y + (labelAbove ? -31 : 35); const detailY = source.y + (labelAbove ? -20 : 46); return <g key={source.id} className={`semantic-source tier-${source.tier}${source.active ? ' active' : ''}`} style={{ '--source-x': source.x, '--source-y': source.y } as CSSProperties}>{Array.from({ length: source.satellites }, (_, satelliteIndex) => { const angle = sourceIndex * .66 + satelliteIndex * (Math.PI * 2 / source.satellites); const sx = source.x + Math.cos(angle) * 31; const sy = source.y + Math.sin(angle) * 25; return <g key={satelliteIndex}><line className="source-satellite-edge" x1={source.x} y1={source.y} x2={sx} y2={sy} /><circle className="source-satellite" cx={sx} cy={sy} r="2.6" /></g>; })}<circle className="source-halo" cx={source.x} cy={source.y} r="25" /><circle className="source-mark" cx={source.x} cy={source.y} r="17" /><text className="source-glyph" x={source.x} y={source.y + 4} textAnchor="middle">{source.glyph}</text><text className="source-label" x={source.x} y={labelY} textAnchor="middle">{source.label}</text><text className="source-detail" x={source.x} y={detailY} textAnchor="middle">{source.detail}</text></g>; })}</svg><section className="orchestrator-plan merged-approval"><ApprovalHeading title="Approve the incident plan" />{visiblePlanItems.length === 0 && <p className="orchestrator-gathering">Gathering connected evidence…</p>}{visiblePlanItems.map(([title, detail, drafted], index) => <div key={title} className={`${drafted ? 'drafted' : ''}${activePlanIndex === index && !ready ? ' active' : ''}`}><i>{index + 1}</i><p><b>{title}</b><small>{detail}</small></p><em>{drafted ? 'Drafted' : 'Drafting'}</em></div>)}<button className="approval-action" disabled={paused || !ready} onClick={onAdvance}>{ready ? 'Approve plan' : 'Preparing incident plan'} →</button></section></div>;
-}
-
-function IdentificationVisual({ progress }: { progress: number }) {
-  const labelLocated = progress >= 0.16;
-  const zoomed = progress >= 0.36;
-  const extracted = progress >= 0.52;
-  const querying = progress >= 0.66;
-  const matched = progress >= 0.84;
-  return <div className="identification-workspace identification-story">
-    <div className="identification-visual-top">
-      <div className="identification-source">
-        <img src="/assets/social-post.png" alt="Customer image with package label" />
-        <div className={`label-region${labelLocated ? ' visible' : ''}`}><span>PRINTED LABEL LOCATED</span></div>
-      </div>
-      <div className={`label-zoom${zoomed ? ' visible' : ''}`}>
-        <header><span>MAGNIFIED PACKAGE LABEL</span><i>OCR FOCUS</i></header>
-        <div className="zoomed-label-image"><span className="zoom-ocr-line" /></div>
-        <p>Reading printed batch information from the package</p>
-      </div>
-    </div>
-    <div className="identification-data-flow">
-      <div className={`extracted-batch${extracted ? ' visible' : ''}`}><span>EXTRACTED FROM IMAGE</span><strong>HLD-2407-A</strong></div>
-      <div className={`database-query${querying ? ' visible' : ''}${matched ? ' matched' : ''}`}>
-        <header><span>PRODUCTION DATABASE</span><i>{matched ? '✓' : <i className="spin-ring" />}</i></header>
-        <p>{matched ? 'Production record found' : 'Searching batch: HLD-2407-A'}</p>
-        {matched && <div><strong>Batch HLD-2407-A</strong><span>Line 4 · 08 July</span><small>Released without quality hold</small></div>}
-      </div>
-    </div>
-  </div>;
 }
 
 function RcaVisual({ progress }: { progress: number }) {
