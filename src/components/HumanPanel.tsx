@@ -199,7 +199,7 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
         )}
         <div className="race-clock amber">
           {formatElapsed(current.cumulative)}
-          <small>total time elapsed</small>
+            <small>since Sarah’s post</small>
         </div>
       </header>
 
@@ -214,7 +214,7 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
         <header className="channel-header">
           <div>
             <strong># incident-hld-2407-a</strong>
-            <small>Live incident coordination · 6 members · senior review began 3 hrs 20 mins after the post</small>
+            <small>Selected exchanges · incident coordination</small>
           </div>
           <div className="channel-people" aria-label="Channel members">
             {people.map(([initials, name], i) => (
@@ -223,24 +223,9 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
           </div>
         </header>
 
-        <div className="social-escalation-banner" role="status">
-          <div className="social-escalation-title">
-            <span className="social-escalation-icon" aria-hidden="true">!</span>
-            <div>
-              <strong>Customer complaint sat unseen on social media</strong>
-              <p>Sarah&apos;s post was published at <b>09:00</b>. No senior team member saw it until <b>12:20</b>.</p>
-            </div>
-          </div>
-          <div className="social-escalation-events">
-            <div><b>3 HRS</b><span>post went unseen</span></div>
-            <div><b>12:00</b><span>Ava, Social Media Intern, flags the post</span></div>
-            <div><b>+20 MIN</b><span>Maya begins senior review</span></div>
-          </div>
-          <em>Investigation began 3 hrs 20 mins after the post</em>
-        </div>
+        {!showSummary && <div className="human-delay-banner" role="status"><span aria-hidden="true">◷</span><strong>Complaint spotted after 3 hours.</strong></div>}
 
-        <div ref={feedRef} className="channel-feed" aria-live="polite">
-          <div className="channel-start">Sarah&apos;s post published at 09:00 · incident channel opened at 12:20 after senior review</div>
+        {!showSummary && <div ref={feedRef} className="channel-feed" aria-live="polite">
           {visibleMessages.map((message, visibleIndex) => {
             const messageIndex = Math.max(0, step - 3) + visibleIndex;
             const isLatest = messageIndex === step;
@@ -255,7 +240,6 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
                       <span>{message.role}</span>
                       <time>{message.timestamp}</time>
                     </div>
-                    {messageIndex === 0 && <span className="social-detection-label">FIRST HUMAN SIGNAL · SOCIAL MEDIA INTERN</span>}
                     <p>{renderMentions(message.message)}</p>
                     {message.attachment && (
                       <div className="channel-attachment">
@@ -276,15 +260,21 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
               <i className="channel-typing-dot" /><i className="channel-typing-dot" /><i className="channel-typing-dot" />
             </div>
           )}
-        </div>
+        </div>}
         {showSummary && (
           <div className="human-final-state">
-            <span className="race-eyebrow">{config.agentRace.humanSummary.headline}</span>
-            <strong>{config.agentRace.humanSummary.elapsed}</strong>
+            <span className="race-eyebrow">HUMAN TEAMS · INCIDENT SUMMARY</span>
+            <h3>{config.agentRace.humanSummary.headline}</h3>
+            <div className="human-summary-metrics">
+              <div><strong>13 hrs 40 mins</strong><span>Elapsed</span></div>
+              <div><strong>15</strong><span>Handoffs</span></div>
+              <div><strong>16</strong><span>Messages</span></div>
+              <div><strong>10</strong><span>People involved</span></div>
+            </div>
+            <small className="human-summary-caption">Full incident totals · selected exchanges shown</small>
             <div className="human-summary-explained">
-              <section><b>HOW THE INCIDENT WAS FOUND</b><p>{renderMentions(config.agentRace.humanSummary.detection)}</p></section>
-              <section><b>WHAT THE TEAM HAS CONFIRMED</b><p>{renderMentions(config.agentRace.humanSummary.confirmed)}</p></section>
-              <section><b>WHAT THE TEAM STILL CANNOT CONFIRM</b><p>{renderMentions(config.agentRace.humanSummary.unresolved)}</p></section>
+              <p>✓ {config.agentRace.humanSummary.confirmed}</p>
+              <p>◌ {config.agentRace.humanSummary.unresolved}</p>
             </div>
             {showAgentChoice && (
               <div className="human-summary-actions">
@@ -299,16 +289,10 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
         )}
       </div>
 
-      <div className="handoff-timing">
-        <div className="timing-handoff"><span>LAST HANDOFF</span><strong>+{current.delay}</strong></div>
-        <div className="timing-total"><span>TOTAL ELAPSED</span><strong>{current.cumulative}</strong></div>
-        <div className="timing-status"><span>STATUS</span><strong>{current.status}</strong></div>
-      </div>
-
-      {!complete && (
+      {!showSummary && step >= 2 && (
         <footer className="evidence-gaps">
           <span className="race-eyebrow">INVESTIGATION STATUS</span>
-          <div><span>✓ Batch confirmed</span><span>◌ Root cause pending</span><span>◌ Stores unknown</span></div>
+          <div><span>✓ Batch confirmed</span>{step >= 3 && <span>◌ Root cause pending</span>}{step >= 4 && <span>◌ Stores being traced</span>}</div>
         </footer>
       )}
     </section>
@@ -319,4 +303,14 @@ function renderMentions(message: string) {
   return message.split(/(@\w+)/g).map((part, i) =>
     part.startsWith('@') ? <mark key={`${part}-${i}`}>{part}</mark> : part,
   );
+}
+
+export function HumanInvestigationReport() {
+  return <article className="comparison-human-report">
+    <header><span className="race-eyebrow">HUMAN TEAMS · INVESTIGATION REPORT</span><h2>{config.agentRace.humanSummary.headline}</h2><p>Recorded investigation snapshot · batch HLD-2407-A</p></header>
+    <div className="human-summary-metrics"><div><strong>13 hrs 40 mins</strong><span>Recorded elapsed time</span></div><div><strong>15</strong><span>Handoffs</span></div><div><strong>16</strong><span>Messages</span></div><div><strong>10</strong><span>People involved</span></div></div>
+    <small className="human-summary-caption">Full incident totals · selected exchanges shown below</small>
+    <div className="human-summary-explained"><p>✓ {config.agentRace.humanSummary.confirmed}</p><p>◌ {config.agentRace.humanSummary.unresolved}</p></div>
+    <details className="comparison-human-exchanges"><summary>View human exchanges <span>{messages.length} selected messages</span></summary><div>{messages.map(message => <article key={`${message.timestamp}-${message.name}`} className="colleague-message"><span className="colleague-avatar">{message.initials}</span><div className="message-body"><div className="message-author"><strong>{message.name}</strong><span>{message.role}</span><time>{message.timestamp}</time></div><p>{renderMentions(message.message)}</p>{message.attachment && <div className="channel-attachment"><span className="file-icon">▤</span><div><strong>{message.attachment}</strong><small>{message.attachmentStatus}</small></div></div>}<div className="message-status"><span />{message.status}</div></div></article>)}</div></details>
+  </article>;
 }

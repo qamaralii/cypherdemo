@@ -1,0 +1,44 @@
+.workflow-comparison { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; background: #f7f5f0; }
+.comparison-agent-view { position: absolute; inset: 0; display: flex; min-height: 0; transform: translateX(0); transition: transform .65s cubic-bezier(.22,.8,.24,1); }
+.comparison-agent-view > .workflow-panel { min-width: 0; }
+.comparison-human-view { position: absolute; inset: 0; display: flex; min-height: 0; transform: translateX(-100%); transition: transform .65s cubic-bezier(.22,.8,.24,1); background: #f7f1e9; }
+.workflow-comparison[data-view="human"] .comparison-agent-view { transform: translateX(100%); }
+.workflow-comparison[data-view="human"] .comparison-human-view { transform: translateX(0); }
+.comparison-rail { flex: 0 0 72px; align-self: stretch; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 28px; min-height: 0; padding: 18px 7px; border: 0; color: #7d5a6d; background: #f3e5eb; cursor: pointer; }
+.comparison-rail-human { border-right: 1px solid #dcbfcd; }
+.comparison-rail-agent { border-left: 1px solid #cbd9e9; color: #456b97; background: #e8eef6; }
+.comparison-rail:hover { filter: brightness(.97); }
+.comparison-rail:focus-visible { outline: 3px solid #c7527d; outline-offset: -4px; }
+.comparison-rail-agent:focus-visible { outline-color: #597eb2; }
+.comparison-rail-icon { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid currentColor; border-radius: 50%; background: #fffdfb80; }
+.comparison-rail-icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.comparison-rail-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.comparison-rail-clock { display: grid; justify-items: center; gap: 5px; width: 100%; text-align: center; }
+.comparison-rail-clock strong { font: 800 20px ui-monospace, monospace; letter-spacing: -.06em; }
+.comparison-rail-clock > span { font-size: 10px; font-weight: 800; }
+.comparison-rail-clock small { font-size: 8px; line-height: 1.4; }
+.comparison-rail-direction { font-size: 24px; }
+.comparison-report-scroll { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: clamp(24px, 4vw, 64px); scrollbar-width: thin; scrollbar-color: #d8cfc5 transparent; }
+.comparison-human-report { max-width: 1050px; margin: 0 auto; color: #3a281c; }
+.comparison-human-report > header h2 { max-width: 850px; margin-top: 16px; font: clamp(30px, 3.2vw, 46px)/1.12 Georgia, serif; }
+.comparison-human-report > header p { margin-top: 12px; color: #88796e; font-size: 13px; }
+.comparison-human-report .human-summary-metrics { margin-top: 28px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.comparison-human-report .human-summary-metrics > div:first-child { grid-column: auto; }
+.comparison-human-report .human-summary-metrics strong { font-size: clamp(22px, 2.5vw, 34px); }
+.comparison-human-report .human-summary-caption { display: block; }
+.comparison-human-report .human-summary-explained { margin: 25px 0; }
+.comparison-human-exchanges { border: 1px solid #d8cfc5; border-radius: 12px; background: #fffdfb; overflow: hidden; }
+.comparison-human-exchanges > summary { padding: 19px 22px; cursor: pointer; font-size: 15px; font-weight: 800; }
+.comparison-human-exchanges > summary span { margin-left: 12px; color: #88796e; font-size: 11px; font-weight: 400; }
+.comparison-human-exchanges > div { padding: 0 22px 18px; }
+.comparison-human-exchanges .colleague-message { padding: 18px 0; border-top: 1px solid #e5dfd7; }
+.comparison-human-exchanges .message-author { flex-wrap: wrap; }
+@media (max-width: 650px) {
+  .comparison-rail { flex-basis: 56px; padding: 12px 4px; gap: 20px; }
+  .comparison-rail-icon { width: 34px; height: 34px; }
+  .comparison-rail-clock strong { font-size: 17px; }
+  .comparison-report-scroll { padding: 20px 14px; }
+  .comparison-human-report .human-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comparison-human-exchanges > summary span { display: block; margin: 5px 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .comparison-agent-view, .comparison-human-view { transition: none; } }

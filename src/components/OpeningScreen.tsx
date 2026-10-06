@@ -4,9 +4,10 @@ import { config } from '../config';
 
 interface Props {
   onStart: () => void;
+  onStartInteraction?: () => void;
 }
 
-export function OpeningScreen({ onStart }: Props) {
+export function OpeningScreen({ onStart, onStartInteraction }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transitionCtxRef = useRef<gsap.Context | null>(null);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -35,6 +36,7 @@ export function OpeningScreen({ onStart }: Props) {
 
   const handleStart = () => {
     if (transitionCtxRef.current) return;
+    onStartInteraction?.();
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const ctx = gsap.context(() => {
       gsap.to(containerRef.current, {

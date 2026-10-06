@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSceneController } from './hooks/useSceneController';
 import { OpeningScreen } from './components/OpeningScreen';
 import { VideoScene } from './components/VideoScene';
@@ -24,6 +24,36 @@ export default function App() {
   const [lastFrameCanvas, setLastFrameCanvas] = useState<HTMLCanvasElement | null>(null);
   const [showReplay, setShowReplay] = useState(false);
   const [showCta, setShowCta] = useState(false);
+  const musicRef = useRef<HTMLAudioElement>(null);
+  const musicStartedRef = useRef(false);
+  const [musicMuted, setMusicMuted] = useState(false);
+
+  const startMusic = useCallback(() => {
+    const audio = musicRef.current;
+    if (!audio) return;
+    audio.volume = .15;
+    musicStartedRef.current = true;
+    audio.play().catch(() => { musicStartedRef.current = false; });
+  }, []);
+
+  useEffect(() => {
+    const audio = musicRef.current;
+    if (!audio) return;
+    if (scene === 'opening') {
+      audio.pause();
+      audio.currentTime = 0;
+      musicStartedRef.current = false;
+    } else if (paused) audio.pause();
+    else if (musicStartedRef.current) audio.play().catch(() => {});
+  }, [scene, paused]);
+
+  const toggleMusic = useCallback(() => {
+    const audio = musicRef.current;
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    setMusicMuted(audio.muted);
+    if (!audio.muted && !paused) startMusic();
+  }, [paused, startMusic]);
 
   const handleF3LastFrame = useCallback((canvas: HTMLCanvasElement) => {
     setLastFrameCanvas(canvas);
@@ -56,9 +86,10 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-navy">
+      <audio ref={musicRef} src={`${import.meta.env.BASE_URL}assets/music/daynigthmorning-door-to-unreality-175605.mp3`} preload="auto" loop />
       {/* ── Opening Screen ── */}
       {scene === 'opening' && (
-        <OpeningScreen onStart={nextScene} />
+        <OpeningScreen onStart={nextScene} onStartInteraction={startMusic} />
       )}
 
       {/* ── F1: Factory ── */}
@@ -173,6 +204,13 @@ export default function App() {
 
       {/* ── Host Controls ── */}
       <HostControls visible={showHelp} onClose={toggleHelp} />
+
+      {scene !== 'opening' && <button
+        className="fixed bottom-14 right-4 z-40 flex items-center gap-2 rounded-full border border-[#d8cfc5] bg-[#fffdfb]/90 px-3 py-2 text-xs font-semibold text-[#4b392c] shadow-sm backdrop-blur-sm cursor-pointer"
+        onClick={toggleMusic}
+        aria-label={musicMuted ? 'Unmute background music' : 'Mute background music'}
+        aria-pressed={!musicMuted}
+      ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M9 18V5l11-2v13M9 8l11-2" /><ellipse cx="6" cy="18" rx="3" ry="2" /><ellipse cx="17" cy="16" rx="3" ry="2" />{musicMuted && <path d="m2 2 20 20" />}</svg>Music {musicMuted ? 'off' : 'on'}</button>}
 
       {/* ── Pause indicator ── */}
       {paused && scene !== 'opening' && (

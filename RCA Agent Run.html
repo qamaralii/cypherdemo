@@ -1,0 +1,568 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>RCA Agent Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky toolbar, then the agent-workspace frame. Inside it the cards stack in the order the
+   agent produces them: log search, batch correlation, store map, root cause. Beat legend underneath. */
+:root {
+  --page: #F3EEE6;
+  --surface: #FDFBF8;
+  --surface-2: #F8F4EE;
+  --line: #E4DCCF;
+  --ink: #2A251F;
+  --ink-2: #6F6558;
+  --ink-3: #A29887;
+  --brown: #8A5A2B;
+  --teal: #22A79D;
+  --teal-ink: #14736C;
+  --teal-soft: #E8F8F5;
+  --teal-line: #93D9D1;
+  --green: #4E8B3A;
+  --green-ink: #3B5E29;
+  --green-soft: #EDF3E4;
+  --green-line: #B1C799;
+  --red: #E5604A;
+  --red-ink: #A33A28;
+  --red-soft: #FFEFEA;
+  --red-line: #F0B8AA;
+  --land: #E6E1D6;
+  --land-line: #C9C1B0;
+  --land-2: #EFEBE2;
+  --log-bg: #26211C;
+  --log-bg-2: #1E1A16;
+  --log-ink: #E9E1D6;
+  --log-dim: #9B9184;
+  --log-line: #3A332C;
+  --log-ok: #86A965;
+  --log-bad: #FF8E7C;
+  --font-ui: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+    --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+    --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+    --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+    --red: #FF7B63; --red-ink: #F4A595; --red-soft: #33201B; --red-line: #6B3A30;
+    --land: #2B2620; --land-line: #4A4237; --land-2: #231F1A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+  --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+  --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+  --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+  --red: #FF7B63; --red-ink: #F4A595; --red-soft: #33201B; --red-line: #6B3A30;
+  --land: #2B2620; --land-line: #4A4237; --land-2: #231F1A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--page); color: var(--ink);
+  font-family: var(--font-ui); font-size: 14px; line-height: 1.45;
+  padding: 0 16px 48px;
+}
+.wrap { max-width: 980px; margin-inline: auto; }
+
+/* ---------- toolbar ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px;
+  padding-block: 14px; background: var(--page); border-bottom: 1px solid var(--line);
+}
+.ttl { min-width: 0; }
+h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.ttl p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.btn {
+  font: 600 12px var(--font-ui); letter-spacing: 0.04em;
+  min-height: 44px; padding: 0 16px; border-radius: 10px; cursor: pointer;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+}
+.btn:hover { border-color: var(--teal-line); }
+.btn[aria-pressed="true"] { background: var(--teal-soft); border-color: var(--teal-line); color: var(--teal-ink); }
+.btn:focus-visible, #scrub:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.scrub { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+#scrub { width: clamp(110px, 20vw, 220px); accent-color: var(--teal); }
+.readout { font: 500 12px var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 9ch; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.err { margin: 12px 0 0; color: var(--ink-2); font-size: 13px; }
+
+/* ---------- workspace frame ---------- */
+.ws { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.ws-head {
+  display: flex; justify-content: space-between; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line);
+  font: 600 11px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.ws-head span:first-child { color: var(--brown); }
+.ws-head span:last-child { color: var(--ink-3); }
+.ws-body { padding: clamp(14px, 3vw, 28px); }
+
+.lbl { font: 600 10px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.lbl.red { color: var(--red-ink); }
+.lbl.green { color: var(--green-ink); }
+
+/* ---------- log search ---------- */
+.log { border-radius: 12px; overflow: hidden; background: var(--log-bg); color: var(--log-ink); border: 1px solid var(--log-line); }
+.log-top { display: flex; justify-content: space-between; gap: 12px; padding: 14px 18px; font-size: 14px; }
+.log-top b { font-weight: 700; }
+.log-top span { color: var(--log-dim); font-size: 12px; }
+.log-sub {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 18px;
+  background: var(--log-bg-2); border-block: 1px solid var(--log-line); font-size: 12px; color: var(--log-dim);
+}
+.log-sub b { color: var(--log-ink); font: 600 12px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.subtxt { position: relative; flex: 1; height: 16px; min-width: 0; }
+.subtxt span { position: absolute; left: 0; top: 0; white-space: nowrap; }
+#subB { opacity: 0; visibility: hidden; color: var(--log-bad); font-weight: 600; }
+.prog { height: 2px; background: var(--log-line); }
+.prog i { display: block; height: 100%; background: var(--teal); transform: scaleX(0); transform-origin: 0 50%; }
+.log-win { height: 182px; overflow: hidden; position: relative; }
+.log-list { will-change: transform; }
+.lr {
+  --rh: 26px;
+  position: relative; height: var(--rh); display: grid; align-items: center; column-gap: 10px;
+  grid-template-columns: 12px 68px 94px minmax(0, 1fr) auto; padding-inline: 18px;
+  font: 500 12.5px var(--font-mono); border-bottom: 1px solid color-mix(in srgb, var(--log-line) 55%, transparent);
+  background: linear-gradient(90deg, rgba(229, 96, 74, calc(var(--a, 0) * 0.40)), rgba(229, 96, 74, calc(var(--a, 0) * 0.07)));
+}
+.lr > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr .mk { color: var(--log-dim); font-style: normal; }
+.lr .tm { color: var(--log-dim); }
+.lr .bid {
+  color: var(--log-ink); font-weight: 700; border-radius: 3px; margin-inline: -3px; padding-inline: 3px;
+  background: linear-gradient(rgba(76, 211, 199, 0.30), rgba(76, 211, 199, 0.30)) left center / calc(var(--w, 0) * 100%) 100% no-repeat;
+}
+.lr .tx { color: #D9C9A8; }
+.lr .st { font: 700 10px var(--font-ui); letter-spacing: 0.08em; color: var(--log-ok); font-style: normal; }
+.lr.anom .mk, .lr.anom .tm, .lr.anom .bid, .lr.anom .tx { color: color-mix(in srgb, var(--log-bad) calc(var(--a, 0) * 100%), var(--log-ink)); }
+.lr.anom .mk, .lr.anom .tm { color: color-mix(in srgb, var(--log-bad) calc(var(--a, 0) * 100%), var(--log-dim)); }
+.lr.anom .st { color: color-mix(in srgb, var(--log-bad) calc(var(--a, 0) * 100%), var(--log-dim)); }
+
+/* ---------- cards that grow in ---------- */
+.reveal { height: 0; overflow: hidden; opacity: 0; visibility: hidden; }
+.reveal > .card { margin-top: 16px; }
+.card { border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
+.card h3 { margin: 4px 0 0; font-size: clamp(16px, 2.4vw, 20px); font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; text-wrap: balance; }
+.card p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); }
+
+.corr { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; padding: 16px 20px; background: var(--red-soft); border-color: var(--red-line); }
+.corr h3 { color: var(--red-ink); }
+.corr-main { flex: 1 1 280px; min-width: 0; }
+.spark { flex: 0 0 auto; width: min(260px, 100%); height: auto; overflow: visible; }
+.spark .exp { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 4; fill: none; }
+.spark .tr { stroke: var(--red); stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.spark .ar { fill: var(--red); fill-opacity: 0.2; }
+.spark .dp { fill: var(--red); stroke: var(--surface); stroke-width: 2; }
+.spark .br { stroke: var(--red-ink); stroke-width: 1.4; fill: none; stroke-linecap: round; }
+.spark text { font: 600 10px var(--font-mono); fill: var(--red-ink); }
+.spark text.mut { fill: var(--ink-2); font-weight: 500; }
+
+.mapc { overflow: hidden; }
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.cc { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mapgrid { display: grid; grid-template-columns: minmax(200px, 280px) 300px; justify-content: center; gap: 12px 64px; align-items: center; padding: 18px 22px 20px; }
+.side { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; min-width: 0; }
+.batch { display: inline-flex; align-items: baseline; gap: 10px; padding: 8px 12px; border-radius: 8px; background: var(--red-soft); border: 1px solid var(--red-line); }
+.batch span { font: 600 9px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--red-ink); }
+.batch b { font: 600 14px var(--font-mono); color: var(--red-ink); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; width: 100%; max-width: 280px; }
+.city {
+  --m: 0; display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 10px; border-radius: 8px; font-size: 14px;
+  color: color-mix(in srgb, var(--ink) calc(var(--m) * 100%), var(--ink-3));
+  background: color-mix(in srgb, var(--red-soft) calc(var(--m) * 100%), transparent);
+}
+.city i { width: 9px; height: 9px; border-radius: 50%; flex: none; border: 1.5px solid var(--ink-3); background: color-mix(in srgb, var(--red) calc(var(--m) * 100%), transparent); border-color: color-mix(in srgb, var(--red) calc(var(--m) * 100%), var(--ink-3)); }
+.pill { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--red-line); background: var(--surface); opacity: 0; visibility: hidden; }
+.pill b { display: block; font-size: 15px; color: var(--red-ink); }
+.pill span { display: block; font-size: 12px; color: var(--ink-2); }
+.mapwrap { width: 300px; max-width: 100%; justify-self: center; }
+.mapwrap svg { display: block; width: 100%; height: auto; overflow: hidden; }
+.land { fill: var(--land); stroke: var(--land-line); stroke-width: 0.8; stroke-linejoin: round; }
+.land2 { fill: var(--land-2); stroke: var(--land-line); stroke-width: 0.6; stroke-opacity: 0.6; stroke-linejoin: round; }
+.ring { fill: var(--surface); stroke: var(--ink-3); stroke-width: 1.5; }
+.dotf { fill: var(--red); stroke: var(--surface); stroke-width: 1.6; }
+.rip { fill: none; stroke: var(--red); stroke-width: 1.6; opacity: 0; }
+.cl { --m: 0; font: 600 10.5px var(--font-ui); fill: color-mix(in srgb, var(--ink) calc(var(--m) * 100%), var(--ink-3)); paint-order: stroke; stroke: var(--land); stroke-width: 3px; stroke-linejoin: round; }
+
+.root { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; background: var(--green-soft); border-color: var(--green-line); }
+.root h3 { color: var(--green-ink); font-size: clamp(18px, 3.2vw, 26px); font-variant-numeric: tabular-nums; }
+.root .arrow { font-style: normal; display: inline-block; margin-inline: 4px; }
+.root svg { flex: none; width: 34px; height: 34px; overflow: visible; }
+.root .tick { fill: none; stroke: var(--green); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 26; stroke-dashoffset: 26; }
+.root .tickc { fill: none; stroke: var(--green-line); stroke-width: 2; }
+
+/* ---------- beat legend ---------- */
+.beats { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.beats li { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); opacity: 0.6; transition: opacity 0.2s, border-color 0.2s, background-color 0.2s; }
+.beats li.done { opacity: 0.85; }
+.beats li.on { opacity: 1; border-color: var(--teal-line); background: var(--teal-soft); }
+.beats b { display: block; font-size: 13px; font-weight: 700; }
+.beats small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12px; line-height: 1.35; }
+.beats time { display: block; margin-top: 6px; font: 500 11px var(--font-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .ws-head { padding-inline: 16px; }
+  .lr { grid-template-columns: 10px 62px 88px minmax(0, 1fr) auto; column-gap: 8px; padding-inline: 12px; font-size: 11.5px; }
+  .lr .tx .l { display: none; }
+  .log-top, .log-sub { padding-inline: 12px; }
+  .mapgrid { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .mapwrap { order: -1; }
+  .list { max-width: none; grid-template-columns: 1fr 1fr; }
+  .root svg { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <h1>RCA agent run</h1>
+      <p>Animation prototype</p>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="replay" type="button">Replay</button>
+      <button class="btn" id="pause" type="button">Pause</button>
+      <button class="btn" id="slow" type="button" aria-pressed="false">Slow motion</button>
+      <div class="scrub">
+        <label class="sr" for="scrub">Scrub through the animation</label>
+        <input id="scrub" type="range" min="0" max="1000" value="0" step="1">
+        <span class="readout" id="readout">0.0 / 0.0 s</span>
+      </div>
+    </div>
+  </header>
+  <p class="err" id="err" hidden>The animation library did not load, so the finished state is shown. Reload to try again.</p>
+
+  <section class="ws" aria-label="Agent workspace, root cause analysis">
+    <div class="ws-head"><span>Agent Workspace</span><span>Live workspace</span></div>
+    <div class="ws-body" id="wsBody">
+
+      <div class="log" id="log">
+        <div class="log-top"><b>Factory log search</b><span>Line 4 &middot; 08 July</span></div>
+        <div class="log-sub">
+          <span class="subtxt"><span id="subA">Scanning production records</span><span id="subB">2 anomalies flagged</span></span>
+          <b id="cnt">0 / 184,260</b>
+        </div>
+        <div class="prog"><i id="prog"></i></div>
+        <div class="log-win"><div class="log-list" id="logList"></div></div>
+      </div>
+
+      <div class="reveal" id="rv1">
+        <div class="card corr">
+          <div class="corr-main">
+            <div class="lbl red">Batch correlation</div>
+            <h3 id="cH">HLD-2407-A matches the Line 4 temperature anomalies</h3>
+            <p id="cM">Expected 160&deg;C &middot; Observed 134&deg;C &middot; 18-minute temperature drop</p>
+          </div>
+          <svg class="spark" id="spark" viewBox="0 0 240 104" role="img" aria-label="Seal temperature holds at 160 degrees, drops to 134 degrees for 18 minutes, then recovers">
+            <line class="exp" id="spExp" x1="8" y1="18" x2="232" y2="18"></line>
+            <text class="mut" id="spExpL" x="232" y="11" text-anchor="end">160&deg;C expected</text>
+            <polygon class="ar" id="spArea" points="80,18 92,59 104,60 116,57 128,58 140,56 152,48 164,32 176,19 176,18"></polygon>
+            <path class="tr" id="spPath" d="M8 18 L32 19 L56 17 L80 18 L92 59 L104 60 L116 57 L128 58 L140 56 L152 48 L164 32 L176 19 L196 18 L232 18"></path>
+            <circle class="dp" id="spDot" cx="104" cy="60" r="0"></circle>
+            <text id="spLbl" x="84" y="66" text-anchor="end">134&deg;C</text>
+            <path class="br" id="spBr" d="M92 80 V86 H176 V80"></path>
+            <text class="mut" id="spBrL" x="134" y="98" text-anchor="middle">18 min</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="reveal" id="rv2">
+        <div class="card mapc">
+          <div class="card-top"><span class="lbl green">Affected store exposure</span><span class="cc" id="cc">0 of 7 cities mapped</span></div>
+          <div class="mapgrid">
+            <div class="side">
+              <div class="batch"><span>Batch</span><b>HLD-2407-A</b></div>
+              <ul class="list" id="cityList"></ul>
+              <div class="pill" id="pill"><b>40 affected stores</b><span>across 7 UK cities</span></div>
+            </div>
+            <div class="mapwrap">
+              <svg id="map" viewBox="-24 0 300 400" role="img" aria-label="Map of the United Kingdom with seven affected cities">
+                <defs>
+                  <radialGradient id="gl"><stop offset="0" stop-color="#E5604A" stop-opacity="0.55"></stop><stop offset="1" stop-color="#E5604A" stop-opacity="0"></stop></radialGradient>
+                  <linearGradient id="swg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E5604A" stop-opacity="0"></stop><stop offset="1" stop-color="#E5604A" stop-opacity="0.28"></stop></linearGradient>
+                </defs>
+                <path class="land2" d="M-8.1,241.9L-8.2,243.1L-10,241.6L-10.8,240.1L-15.5,239.3L-13.6,237.8L-12.6,238.2L-9.2,238.3L-8.3,239ZM55.8,194.3L52.1,197L51.6,198L50.5,202L50.4,203.1L49.2,205.2L48,207.6L46.8,208.5L44.8,209.2L43.7,209.9L42.3,209.5L40.5,209.6L39.6,210.4L39.7,211L40.2,211.7L41.7,212.8L43.5,213.8L43.3,214.6L42.4,215.5L36.5,217.9L34.7,219.4L34.1,220.3L34.7,221.9L39.4,226.6L40.2,227.1L41,229.8L45.1,231L46.8,232.8L48.2,233.1L51.3,233L52.6,233.7L53.4,233.2L53.8,232.3L56.4,229.9L57.3,228.9L56.8,227.5L56.2,226.4L57.8,224.3L59.8,222.1L60.8,222.2L62.5,223.5L63.8,225.3L64,226.7L64.2,227.8L65.6,229.9L66.4,230.7L68.7,231.1L69.2,231.9L68.8,235.1L69.1,236.2L71.6,236.2L74.1,235.9L74.9,236L75.9,235.4L77.3,234.7L79.2,234.9L80.3,236.4L80.7,237.8L79,238.3L77.1,238L76.3,239L76.2,240.8L76.9,243.1L78.1,244.8L79,248.6L79.8,252.7L81,255.2L81.3,258.3L81.1,259.8L81.4,262.6L80.8,263.5L81.2,266.1L82.7,271.4L83.3,274.3L83.7,280.7L82.7,283.1L81.4,285.3L80.4,288L79.8,290.9L79.3,295.6L76.3,301L75,302.3L73.5,303.2L76.8,306.9L74.1,308.6L71.2,309.2L68,308.2L66.1,308.3L64.2,309.6L63.6,310.3L63,309.9L61.8,306.8L60.9,310L59,311L55.9,310.8L50.7,311.7L48.6,312.6L47.8,314L47.1,315.6L46.3,316.6L45.3,317.1L41.3,318.3L40.5,318.8L38.6,321.4L36.2,323L34.1,323.4L32.4,321.9L31.6,321L30.8,320.5L28,320.6L28.8,321.1L29.4,322.1L29.7,324.2L29.3,326.2L28,327.2L26.4,327.4L23.8,329.5L20.3,330.1L18.4,332.1L7.1,335.4L6.6,335.4L5,334.5L3.3,334.2L1.6,334.4L-3.1,336.3L-5.5,335.9L-2.6,331.4L1.4,329.1L1.8,328.4L0.5,328.2L-6.9,329.7L-9.6,331.1L-12.2,331.5L-11,329.4L-7.6,326.6L-5.8,325.2L-4.7,324.7L-3.5,323L0.1,321.1L-11.3,325L-14.3,324.5L-14.9,323.5L-17.3,323.9L-18.2,321.3L-14.8,317.3L-12.8,315.6L-10.3,314.7L-8,313.3L-7.2,311.7L-8.3,311.1L-15.2,311.5L-18.5,311.2L-18.3,309.9L-17.6,308.4L-14.3,306L-12.4,305.6L-10.7,305.8L-9.1,306.4L-7.9,307.3L-4,306.8L-5.6,305.2L-5.8,302L-7.1,300.9L-5.5,299.4L-3.7,298.5L-0.7,295.4L0.4,294.9L6.4,294.2L12.8,292.6L19.2,290.3L15.9,289L14.3,287.3L11.8,290.7L10,292L4.9,292.7L3.3,292.3L1,291.3L0.2,291.7L-0.4,292.5L-3.8,294.1L-7.4,294.5L-3.2,291.5L2,286.4L3.2,284.7L4.9,281.9L4.4,280.7L3.3,279.9L7.1,274L8.4,273L10.9,272.8L12.7,271.9L13.5,271.9L14.1,271.5L15.7,269.8L13.3,268.7L10.9,268.1L3.1,268.7L2.1,268.5L1.1,268L0.5,267.2L0,265.2L-0.5,264.8L-2.3,264.8L-4,265.4L-5.3,265.3L-6.4,264.5L-4.5,262.4L-6.9,261.9L-9.4,262.3L-11.5,261.7L-11.5,260.4L-10.6,259.1L-11.8,257.9L-12.1,256.3L-10.7,255.6L-9.4,255.9L-6.4,254.7L-2.8,254.1L-5.9,253L-7.2,252.1L-7.3,250.6L-7,249.3L-3.3,247.1L0.6,246.2L0.2,244.8L0.6,243.3L-3.4,242.8L-7.3,243.9L-6.9,240.9L-5.9,238.3L-5.8,236.6L-5.9,234.7L-7.8,235.5L-8,232.8L-8.8,231L-11.5,232.3L-11.4,229.8L-10.6,228.2L-9.2,227.4L-7.8,227.8L-5.3,227.8L-2.7,226.4L0.9,226.2L6.7,226.5L10.7,230.1L11.7,229.5L13.3,227.2L14.1,227L20,228L23.8,229.2L24.8,228.8L24.2,226.4L22.9,224.6L24.5,222.3L26.5,220.8L27.8,220L30.8,219L32.1,218.1L33,215.2L34.4,212.7L26.8,214L19.6,211.1L20.8,209.1L22.3,207.9L24.9,206.9L25.2,205.9L26.5,205L28.6,202.6L27.9,199.6L28.3,197.3L29.9,195.8L30.4,193.7L31.1,192.1L34.3,191.6L37.4,190.1L38.5,190.3L42.1,189.9L43.4,190.5L43.1,187.9L45.3,187.6L46.2,188.1L46.6,189.9L47.6,191.1L47.9,193.1L47.2,194.7L46.1,195.9L47.1,197.1L45.5,199.3L47.3,198.4L49.7,196.2L49.6,194.4L49.2,192.2L48.5,190.2L48.8,188L50.2,186.6L53.9,185.9L52.3,183.4L53.7,183.1L55.2,183.6L57.3,185.6L59.5,187.1L61.9,188.4L59.6,190.9L56.9,192.5Z"></path>
+                <path class="land" d="M162.4,330.6L160.7,332.2L155.1,333.8L152.8,335.4L148.6,339.1L147.8,339.4L141.5,338.5L136.8,333.8L133.8,331.8L132.5,331.6L131.3,332.1L128.5,332.7L125.7,332.7L127.1,330.4L129.1,329.2L124.8,328.3L123.5,327.7L122.2,326.2L118.8,325.9L117.2,326.3L114.4,328.3L110.1,330.5L104.9,327.5L103.9,326.2L103.9,323.6L103.1,321.6L101.7,320.9L103.5,318.3L105.7,316.5L110.6,314.7L118.1,310.6L122.3,308.8L126.1,305.8L127.7,303.9L128.9,301.3L130,298.2L131.7,295.6L130.1,295L129.3,293L129.6,291.1L130.3,289.3L129.7,287.1L128.5,284.8L128.6,283.1L128.8,281.1L125.9,281.3L122.8,281.9L120.1,283.2L117.5,285L115.3,285.4L115.3,283.9L116.3,282.1L118.9,279.5L121.7,277.4L122.8,275.7L123.5,273.8L125,272.2L128.7,269.3L135.7,266L136.8,265.8L139.5,266.2L142.2,265.8L144.6,264.5L147,264.3L152.4,267.7L150.8,262.4L153.1,261.2L156.6,266L157.8,266.4L160.5,265.8L159.4,264.9L158.3,264.9L156.7,264.2L155.4,262.6L153.1,257.8L153.3,254.9L154.7,251.9L156.4,249.1L155.1,248.5L153.9,247.5L153.6,244.7L154,242.2L157,240L157.8,236.7L158.3,233L157.8,231.4L154.8,231.6L153.4,232.3L152.1,233.5L150.8,233.4L147.1,229.3L145,226.2L141.3,219.7L140.8,215.8L143.8,207.4L148.4,201.9L153.8,200L152.8,199.7L144.5,199.6L141.7,200.3L139.2,202.5L137.8,203.2L136.3,203.4L134.9,204.5L133.6,206.1L132.2,207.1L129.4,206.8L128.1,207.2L127.1,206.2L126.4,204.8L125.3,204.4L124.1,204.8L121.7,206.8L119.1,208L116.1,206.7L112.1,204.4L111.3,205.2L110.4,207.4L109.9,210.7L107.1,207.9L104.6,203.9L103.8,201.5L103.8,198.7L105.1,197.6L106.5,198.6L108.6,192L112.8,183.4L114.3,180.9L115.3,177.6L115.2,175.3L114.2,173.5L110.4,169.3L110.4,165.9L110.8,162L111.9,159.7L112.3,159.3L117.5,159.4L115.5,158.1L111.5,154.6L111.5,153.4L112.5,150.1L112.1,150.5L111.2,151.9L109.5,155.6L108.5,156.5L105.6,157.3L105.1,159.1L104.6,159.6L103.2,159.7L102.8,161.4L102.4,161.5L102,159.7L102,156.7L102.6,154L103.7,151.9L107.8,147L105.8,148.5L101.2,153L98.8,155.9L98.2,157L98,157.8L98,158.8L99.1,164L98.7,166.4L94.8,182.1L94,183.7L93.3,184.5L92.7,184.7L90.7,184.4L89.8,183.2L89.8,181.9L90.2,179.9L91.8,172.4L92.6,170.4L93.7,168.4L95.9,165L95.9,164.8L94.3,165.4L93.7,165.2L93.2,164.6L93.5,154.5L94.8,151.1L95.3,146.2L96.4,142.1L97.6,139L98.6,135.1L100.1,133.3L100.5,130.6L102.1,127.8L103.4,124.7L102.7,125L94.6,132.9L92.5,134.3L89.7,134L87.5,133.1L85.8,131.2L85.1,127.6L83,127.5L81.3,126.9L81.3,126.4L83.5,124.4L87.3,123.8L90.7,120.6L87.6,118.5L87.8,117.8L90.5,116L93.9,109.9L94.7,104.3L93,101.6L92.4,99.9L89.2,97.9L88.6,95.5L89,94.1L90,92.7L91.6,91.7L94.2,90.6L91.9,89.5L91.1,88.3L90.4,86.4L90.4,85.3L91.6,80.5L92.2,78.5L93.6,76L99.7,76.1L100.3,75L101,74.9L104.1,76L103.6,74.8L98.6,68.8L98.1,67.6L99.6,64.4L99.7,62.9L99.5,61.3L99.9,60.2L101.5,59.5L106.4,59.6L107.6,59.1L107.1,57.5L105.9,55.4L105.7,53.7L106,52.1L106.1,48.9L106.2,47.6L107.4,45.5L108.3,44.9L109.6,44.5L112.3,45.2L113.3,46L114.5,48.1L115.3,47.8L118.7,45.7L119.7,45.4L121.1,47.9L126.8,45.9L134.5,45L139.1,43.7L144,43.2L148.6,41.7L153.4,42.4L153.5,43.3L153.3,44.5L152.1,47.7L152.3,51.4L152,52.6L151.4,53.9L149.7,56.4L145,60.1L136.5,68.4L131.4,72.5L130.8,74.5L130.4,77.3L133.4,77.8L134.6,78.7L133.9,80.1L129.4,84.9L128.1,89.3L131.5,89.2L134.3,88.3L140,85.6L145.2,83.5L147.7,83.5L152.7,85.1L153.8,85.1L155.9,84.4L158,84.3L172.3,84.8L176.3,83.8L179,85L181.2,87.8L183.3,93L183.2,93.8L182,96.1L179.6,99.1L177.6,103.1L177,105.3L176.6,107.7L176,109.9L172,120.2L168,125.8L166.4,129.9L164.2,133.1L162.1,135.1L160,136.4L153.5,137.9L151.8,138.8L149.7,140.6L147.4,141.5L150,141.3L152.6,140.4L157.3,140L162.8,143.4L162.3,146.1L160.1,148.3L155.1,148.7L150.5,153.4L148.4,154.9L146.2,155.6L143.4,155.4L138.4,154.1L136.2,152.8L138.2,154.9L140.4,156.1L153.5,158.8L154.3,158.5L158.4,155.7L164,155.7L174.6,160.8L177.7,164.8L182,170.4L184.4,172.7L186.2,174.7L187.2,177.6L189.3,187.5L191.6,197L194.7,207.4L196,210.2L197.9,212.2L207.2,216.8L209.2,218.3L212.8,222.7L216.3,227.3L219.5,230.9L222.9,233.7L221.3,235.3L220.1,237.6L221,240.8L222.4,243.8L225.1,248.7L227.7,254L226.7,253.2L225.8,252.8L224.5,252.8L223.2,252.6L220.8,251L218.6,248.9L214.1,249.7L211.6,249.4L209.5,249.4L213.6,250.6L218.1,250.7L227.9,259.5L231.3,264.7L233.2,271.6L231.9,274.7L229.8,276.7L227.8,279L226,281.5L231.5,285.3L232.6,285.2L233.9,284.6L235,283.4L237,280.3L238,279.2L241.4,278.8L244.3,279L247.1,279.6L249.7,279.4L254.7,280.8L257.3,282L263.8,287.4L265.1,290.3L265.8,294.2L265.9,298.4L264.8,302.2L263.5,305.7L262.7,310.1L262.2,311.8L261.5,313L258,316.6L255.7,318L254.8,317.4L253.8,317.4L253.7,318.3L254.7,320.1L254.8,322.2L252.8,323.8L250.7,324.5L247.3,323.6L242.5,326.6L246,328.1L246.6,329.7L245.8,332.5L243.7,333.8L241.2,334.4L238.8,334.5L236.8,335.2L234.8,336.5L237.3,335.8L239,336.5L240.1,338.8L241,339.5L245.8,340.5L248.7,340.5L254.4,339.9L257.1,340L258.1,340.4L258.1,342.3L257.7,347.2L256.9,348.2L249.4,352.2L247.8,355L247.4,356.7L243,356.5L241,358.2L237.4,359.4L234.7,360.7L232,362.3L229.7,362.8L220.2,360.8L214.3,361L206.5,362.7L204.5,362.4L201.5,360.8L198.4,359.7L194.9,359.3L191.7,357.8L193.7,360.6L189.4,363.3L187.4,363.9L185.4,363.8L181.2,364.6L177.3,364.2L177.9,366.1L178.9,367.8L178.2,368.5L177.2,368.7L169.9,367.4L168.8,367.6L168,368.8L165.3,368.2L162.6,366.2L159.9,364.9L157,364.2L154.6,364.5L145.2,367.6L143.3,370.7L142.3,375.1L141,379L138.7,382L136.1,382.5L133.6,380.4L128.8,378.1L127.1,376.5L126.6,376.4L126.1,377L124.3,377.7L122.3,377.7L119.4,378.3L114.2,380.2L112.1,381.4L107.6,384.9L106.7,385.9L105.1,389.4L102.5,390L100.2,387.8L97.6,387L94.9,387.8L93.2,388.9L92.5,388L92.4,386L94.4,383.6L99.8,381.8L104.5,377.1L106.8,374.2L107.7,372.6L108.8,371.6L110.3,371.2L111,369.4L117.5,362.2L118.1,360.6L118.5,357.7L119,354.8L124.3,353L126.8,346.9L127.5,346.5L134.9,345.4L140.4,345.4L145.9,346.6L148.7,346.7L151.4,346.3L153.6,344.7L157.4,338.8L159.5,336.2L162,333.8L164.3,331.2L168,326.2L165.4,327.9ZM126.6,265.3L127.6,266L130.1,265.9L129.3,267.5L126.6,269.4L124.7,271.1L122.5,272.6L121.4,270.9L120.1,271L118.3,267.7L118,262.8L120.4,261.5L123.9,261.5ZM165.2,15.3L162.6,15.4L163.9,12.7L165.5,12L168.6,12.3L168,13.5ZM150.8,35.2L149.4,35.8L148.1,35.8L146,33.2L145.3,31.2L145.4,30L146.3,29.6L148.3,30.2L149.3,32.4L149.4,33.8L149.7,34.4L150.9,34.9ZM156.3,37.6L156.1,37.7L155.2,36.9L153.8,33.9L156.1,33.4L157.1,33.7L156.7,35ZM153.3,24.5L153,25.6L154.8,25.6L157.3,26.6L158.9,26.7L160.2,27.9L159.5,30.1L158.7,30.8L157.8,30.8L154.8,28.6L150.8,29.6L149.9,29.3L149.4,28.7L149.2,27.9L149.2,26.3L149,25.9L147.6,27.4L146.9,27.2L146.5,26.5L146.4,25L146.5,22.9L147.4,19.9L148.8,19.3L151,19.7L153.5,21.4L154.2,22.4L154.2,23.3ZM161,17.4L158.9,18.5L158.1,17.6L157.9,14.6L155.5,13.3L154.3,12.6L153.5,11.1L153.6,10.6L155.2,10L157.9,12.7L159,14.9L161,15.6L161.2,15.9ZM70.1,132L68.8,132.3L68.7,131.7L71.1,128.8L72.5,128.4L73,128.6L72,130.3ZM105.3,179.7L102.4,179.7L101.3,179.3L100.1,178.3L98.6,172.7L99.1,170.6L99.7,169.7L100.3,168.9L101.9,168.6L103.5,169.6L104,170.6L105.3,174.5L105.6,177.8ZM89.6,142.3L80.3,144.6L77.1,144.4L76.7,143.2L77.4,142.5L80,141.8L81.1,136.1L77.1,133.5L76.9,132.7L77.2,131.5L77.6,130.9L80.1,129.6L81.1,129.3L81.9,129.5L83.7,131L85.7,134.2L88.2,134.7L90,136.1ZM81.4,159.7L82.2,165L83,168.3L83,169.5L82.3,171.1L78.5,173.2L77.2,173.2L77.2,172.7L78.1,170.5L77.3,168.1L77.6,166.2L77.3,166L76.5,166.2L73.8,169.1L72.8,169.4L72.8,168.8L73.4,166.4L73.5,164.8L73.9,163.8L74.7,162.8L75.6,162.1L76.3,162L77.1,162.8L79.3,160.7ZM85.1,164.5L84.6,164.9L83.4,164.9L83,164.1L82.7,163.1L82.7,161.2L83.4,159.9L86.4,157.8L85.1,157.1L85,156.6L85.8,154.9L89.1,152.2L90,151.7L90.8,151.8L89.1,156.5ZM79.8,54.6L76.7,62.3L75.6,62.5L74.5,64.5L71.4,66.6L74.2,66.6L74.9,67.4L74.9,68.9L74.4,69.8L70.8,73.3L68.4,74.7L65.8,78.4L64.4,78.4L63.1,80.7L62,81.7L61.4,81.7L60.6,81.3L59,79L62,76.7L62.3,75.5L64.3,74.1L64.2,73.7L60.9,71.9L59.6,70.6L59.8,69.9L61.3,68.5L60.5,68.3L60,67.6L59.2,67.2L58.8,66.5L58.8,64.6L58.9,62.6L59.9,61.8L60.3,60.9L60.7,60.6L62.1,61.1L63.6,62.6L65.3,62L67.4,62.3L67.4,61.9L65.9,58.1L66.2,57.4L67,56.4L71.7,53.7L77.4,49.1L78.8,48.4L79.2,49L79.8,51.4ZM77.8,115.9L77.1,116.4L76.3,116.3L75.4,115.6L74.3,113.6L76.8,112.1L77.9,113L78.2,113.9L78.2,115ZM81,92.4L80.9,94.4L80.5,96.7L81.1,99.1L81.2,100.7L82.2,101.3L82.8,102.1L87.2,103L91.3,102.7L92.1,103.4L92.1,104.6L91.5,105.8L89.2,108L86.4,111.6L85.6,112.4L84.6,112.4L84.1,112.1L83.5,105.6L80.6,106.4L78.2,106.4L76.8,105.6L75.9,104.1L74,100.2L68.5,98.6L67,96.5L66.5,95.1L66.8,94.5L67.9,92.9L69.3,93.4L70.2,93.1L70.7,92.4L70.7,91.7L70,90.4L70,89.9L75.5,88.2L76,85.4L77.2,85.1L78.6,86.1L80.5,88.9ZM56.1,84.7L58.8,87.1L56.6,91.2L53.4,91.2L48.9,88.3L48.9,87.7L49.2,86.7L49.9,86L50.7,85.8L51.8,86.4L53.4,85.5L54.6,85.8ZM55.1,109.4L54.1,109.6L52.9,109.4L52,108.7L51.3,106.1L51.1,104.4L51.4,101.4L51.3,97.9L54,97.7L54.7,98.2L55.1,108.9ZM51.2,115.8L49.1,116.4L48.4,116.1L48.2,115.5L48.7,114L50.3,113.5L51.4,114.3L51.6,115ZM79.2,234.9L77.3,234.7L75.9,235.4L74.9,236L74.1,235.9L71.6,236.2L69.1,236.2L68.8,235.1L69.2,231.9L68.7,231.1L66.4,230.7L65.6,229.9L64.2,227.8L64,226.7L63.8,225.3L62.5,223.5L60.8,222.2L59.8,222.1L57.8,224.3L56.2,226.4L56.8,227.5L57.3,228.9L56.4,229.9L53.8,232.3L53.4,233.2L52.6,233.7L51.3,233L48.2,233.1L46.8,232.8L45.1,231L41,229.8L40.2,227.1L39.4,226.6L34.7,221.9L34.1,220.3L34.7,219.4L36.5,217.9L42.4,215.5L43.3,214.6L43.5,213.8L41.7,212.8L40.2,211.7L39.7,211L39.6,210.4L40.5,209.6L42.3,209.5L43.7,209.9L44.8,209.2L46.8,208.5L48,207.6L49.2,205.2L50.4,203.1L50.5,202L51.6,198L52.1,197L55.8,194.3L56.7,195.8L58.6,196.2L60.3,194.8L62.2,190.6L63.6,190.4L65.1,190.7L68,190.2L73.3,188.3L75.6,188.2L78.9,189.2L81.4,189.2L83.5,192.2L84.7,196.9L87.4,201.6L91.1,205.6L91.1,208L89.9,209.3L87.2,211L87.3,212.7L88.9,211.8L90.5,211.4L94.2,211.8L95.4,213.6L96.3,216.2L96.8,218.4L96.5,220.8L95.5,220L94.5,217.9L93.4,216.9L92.1,216.4L92.7,219.3L92.4,223.2L93,223.6L94.8,223.6L93.6,227.5L91.2,228.7L88.4,229.1L87.8,230.5L87.3,232.3L85.8,234.9L84,236.4L81.6,236.2ZM200,365.5L198,366.7L197.4,368.2L196.9,368.8L195.6,369.2L194.4,369.2L189.5,366.2L188.3,366.4L189.4,364.9L192.5,363.9L194.2,362.4L198.2,363.8Z"></path>
+                <g id="sweep" opacity="0"><rect x="-24" y="-70" width="300" height="70" fill="url(#swg)"></rect><rect x="-24" y="-1" width="300" height="2" fill="#E5604A"></rect></g>
+                <g id="cities"></g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal" id="rv3">
+        <div class="card root">
+          <div>
+            <div class="lbl red">Root cause confirmed</div>
+            <h3><span id="rcA">160</span>&deg;C <i class="arrow" id="rcArrow">&rarr;</i> <span id="rcB">134</span>&deg;C temperature drop</h3>
+            <p id="rcP">Batch HLD-2407-A reached 40 stores across 7 cities.</p>
+          </div>
+          <svg viewBox="0 0 34 34" aria-hidden="true"><circle class="tickc" cx="17" cy="17" r="15"></circle><path class="tick" id="tick" d="M9.5 17.5l5.2 5.2L24.5 11.5"></path></svg>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <ol class="beats" id="beats">
+    <li data-t="0.4"><b>Search</b><small>Production records stream past the reader</small><time>0.4 s</time></li>
+    <li data-t="2.3"><b>Flag</b><small>Out-of-range seal temperatures turn red</small><time>2.3 s</time></li>
+    <li data-t="3.4"><b>Correlate</b><small>The flagged rows share one batch; the dip is traced</small><time>3.4 s</time></li>
+    <li data-t="5.3"><b>Trace</b><small>The batch is traced to seven cities on the map</small><time>5.3 s</time></li>
+    <li data-t="8.4"><b>Confirm</b><small>The root cause is stated</small><time>8.4 s</time></li>
+  </ol>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var reveals = [$('rv1'), $('rv2'), $('rv3')];
+
+  /* ---------- data ---------- */
+  var CITIES = [{"n": "Glasgow", "x": 125.3, "y": 162.5}, {"n": "Leeds", "x": 188.6, "y": 246.4}, {"n": "Manchester", "x": 172.4, "y": 259}, {"n": "Birmingham", "x": 180.6, "y": 297.7}, {"n": "Cardiff", "x": 150.5, "y": 335.9}, {"n": "Bristol", "x": 164.3, "y": 337}, {"n": "London", "x": 221.9, "y": 335}];
+  var LABEL = {
+    Glasgow:    { dx: 9,  dy: 4,  a: 'start' },
+    Leeds:      { dx: 9,  dy: -3, a: 'start' },
+    Manchester: { dx: -9, dy: 8,  a: 'end' },
+    Birmingham: { dx: 9,  dy: 5,  a: 'start' },
+    Cardiff:    { dx: -9, dy: 4,  a: 'end' },
+    Bristol:    { dx: -2, dy: 17, a: 'middle' },
+    London:     { dx: 9,  dy: 4,  a: 'start' }
+  };
+
+  var TOTAL = 184260, RH = 26, WIN = 182;
+  // 24 log lines; the last seven are what stays on screen.
+  var ROWS = (function () {
+    var ids = ['HLD-2406-A', 'HLD-2406-B', 'HLD-2407-A', 'HLD-2405-C', 'HLD-2408-B', 'HLD-2407-B', 'HLD-2409-B', 'HLD-2406-F', 'HLD-2410-B'];
+    var temps = [160, 159, 160, 161, 158, 160, 159, 160, 161];
+    var gaps = [172, 185, 168, 181, 176, 190, 170, 183, 177, 169, 186, 174, 180, 171, 188, 175];
+    var t = 7 * 3600 + 11 * 60 + 20, out = [], i;
+    function fmt(s) { var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x; }
+    for (i = 0; i < 17; i++) {
+      var id = (i === 3 || i === 9 || i === 14) ? 'HLD-2407-A' : ids[(i * 5 + 1) % ids.length];
+      out.push({ t: fmt(t), id: id, c: temps[(i * 4) % temps.length], an: false });
+      t += gaps[i % gaps.length];
+    }
+    out.push({ t: '08:02:00', id: 'HLD-2407-A', c: 160, an: false });
+    out.push({ t: '08:05:07', id: 'HLD-2406-B', c: 159, an: false });
+    out.push({ t: '08:08:14', id: 'HLD-2407-B', c: 160, an: false });
+    out.push({ t: '08:14:22', id: 'HLD-2407-A', c: 134, an: true });
+    out.push({ t: '08:14:28', id: 'HLD-2409-B', c: 160, an: false });
+    out.push({ t: '08:17:08', id: 'HLD-2407-A', c: 136, an: true });
+    out.push({ t: '08:17:35', id: 'HLD-2410-B', c: 159, an: false });
+    return out;
+  })();
+  var OFF = (ROWS.length - 7) * RH;
+
+  /* ---------- build the static pieces ---------- */
+  var list = $('logList'), rowEls = [];
+  ROWS.forEach(function (r) {
+    var d = document.createElement('div');
+    d.className = 'lr' + (r.an ? ' anom' : '');
+    d.innerHTML = '<i class="mk">' + (r.an ? '!' : '&rsaquo;') + '</i><span class="tm">' + r.t + '</span><b class="bid">' + r.id +
+      '</b><span class="tx"><span class="l">Seal temp </span>' + r.c + '&deg;C</span><em class="st">' + (r.an ? 'ANOMALY' : 'NORMAL') + '</em>';
+    list.appendChild(d); rowEls.push(d);
+  });
+
+  var NS = 'http://www.w3.org/2000/svg';
+  function se(n, at) { var e = document.createElementNS(NS, n); for (var k in at) e.setAttribute(k, at[k]); return e; }
+  var cityG = $('cities'), cityList = $('cityList'), cityObjs = [];
+  CITIES.forEach(function (c) {
+    var lb = LABEL[c.n] || { dx: 9, dy: 4, a: 'start' };
+    var g = se('g', {});
+    var glow = se('circle', { cx: c.x, cy: c.y, r: 0, fill: 'url(#gl)' });
+    var ring = se('circle', { cx: c.x, cy: c.y, r: 4.5, 'class': 'ring' });
+    var rip = se('circle', { cx: c.x, cy: c.y, r: 4, 'class': 'rip' });
+    var dot = se('circle', { cx: c.x, cy: c.y, r: 0, 'class': 'dotf' });
+    var tx = se('text', { x: c.x + lb.dx, y: c.y + lb.dy, 'text-anchor': lb.a, 'class': 'cl' }); tx.textContent = c.n;
+    [glow, ring, rip, dot, tx].forEach(function (e) { g.appendChild(e); });
+    cityG.appendChild(g);
+    var li = document.createElement('li'); li.className = 'city'; li.innerHTML = '<i></i>' + c.n;
+    cityList.appendChild(li);
+    cityObjs.push({ glow: glow, rip: rip, dot: dot, tx: tx, li: li, c: c });
+  });
+
+  var err = $('err');
+  if (!window.gsap) {
+    err.hidden = false;
+    reveals.forEach(function (e) { e.style.height = 'auto'; e.style.opacity = 1; e.style.visibility = 'visible'; });
+    rowEls.forEach(function (r, i) { r.style.display = i >= ROWS.length - 7 ? '' : 'none'; if (r.classList.contains('anom')) r.style.setProperty('--a', 1); });
+    $('cnt').textContent = '184,260 / 184,260'; $('prog').style.transform = 'scaleX(1)';
+    cityObjs.forEach(function (o) { o.dot.setAttribute('r', 4.8); o.li.style.setProperty('--m', 1); o.tx.style.setProperty('--m', 1); });
+    $('pill').style.opacity = 1; $('pill').style.visibility = 'visible'; $('cc').textContent = '7 of 7 cities mapped';
+    $('spDot').setAttribute('r', 4.5); $('tick').style.strokeDashoffset = 0;
+    return;
+  }
+
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var scrub = $('scrub'), readout = $('readout'), pauseBtn = $('pause'), slowBtn = $('slow'), replayBtn = $('replay');
+  var beatEls = Array.prototype.slice.call($('beats').children);
+  var BEATS = beatEls.map(function (el) { return parseFloat(el.getAttribute('data-t')); });
+  var ctx = null, tl = null, loopTimer = null, started = false, follow = true;
+
+  function follow_(el) {
+    if (!follow) return;
+    var r = el.getBoundingClientRect(), over = r.bottom - (window.innerHeight - 24);
+    if (over > 0) window.scrollBy(0, over);
+  }
+  function reveal(t, el, at, dur) {
+    t.fromTo(el, { height: 0, autoAlpha: 0 }, { height: 'auto', autoAlpha: 1, duration: dur, ease: 'power3.out', onUpdate: function () { follow_(el); } }, at);
+  }
+  function swap(t, a, b, at) {
+    t.to(a, { autoAlpha: 0, duration: 0.15 }, at);
+    t.fromTo(b, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15, immediateRender: false }, at + 0.05);
+  }
+  function resetManual() {
+    $('logList').style.transform = ''; $('prog').style.transform = 'scaleX(0)';
+    $('cnt').textContent = '0 / ' + TOTAL.toLocaleString('en-US'); $('cc').textContent = '0 of 7 cities mapped';
+    $('sweep').setAttribute('transform', 'translate(0,0)');
+    $('rcB').textContent = '160';
+  }
+
+  function build() {
+    if (ctx) ctx.revert();
+    resetManual();
+    var spLen = $('spPath').getTotalLength(), brLen = $('spBr').getTotalLength();
+    $('spPath').style.strokeDasharray = spLen; $('spBr').style.strokeDasharray = brLen;
+
+    ctx = gsap.context(function () {
+      var t = gsap.timeline({ paused: true, defaults: { ease: 'power2.out' }, onUpdate: sync, onComplete: done });
+
+      /* 0.4  SEARCH: records stream upward past the reader; counter and progress line follow */
+      var T0 = 0.4, D = 2.5, sp = { v: 0 };
+      t.to(sp, { v: 1, duration: D, ease: 'none', onUpdate: function () {
+        $('logList').style.transform = 'translate3d(0,' + (-OFF * sp.v) + 'px,0)';
+        $('prog').style.transform = 'scaleX(' + sp.v + ')';
+        $('cnt').textContent = Math.round(TOTAL * sp.v * sp.v * (3 - 2 * sp.v)).toLocaleString('en-US') + ' / ' + TOTAL.toLocaleString('en-US');
+      } }, T0);
+
+      /* 2.3  FLAG: each anomaly turns red the moment it enters the window */
+      var aRows = [], dimRows = [], aBids = [];
+      ROWS.forEach(function (r, i) {
+        var isA = r.id === 'HLD-2407-A';
+        if (r.an) {
+          var pe = (i * RH - WIN) / OFF;
+          t.fromTo(rowEls[i], { '--a': 0 }, { '--a': 1, duration: 0.25 }, T0 + pe * D);
+          aRows.push(rowEls[i]);
+        } else if (!isA) { dimRows.push(rowEls[i]); }
+        if (isA) aBids.push(rowEls[i].querySelector('.bid'));
+      });
+      swap(t, $('subA'), $('subB'), 2.95);
+      t.to(dimRows, { opacity: 0.35, duration: 0.35 }, 2.95);
+
+      /* 3.4  CORRELATE: the flagged rows share one batch id; the card and temperature trace follow */
+      t.fromTo(aBids, { '--w': 0 }, { '--w': 1, duration: 0.4, stagger: 0.1 }, 3.4);
+      reveal(t, $('rv1'), 3.75, 0.5);
+      t.fromTo($('cH'), { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.35 }, 3.95);
+      t.fromTo($('cM'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, 4.2);
+      t.fromTo($('spExp'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 3.95);
+      t.fromTo($('spExpL'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 4.05);
+      t.fromTo($('spPath'), { strokeDashoffset: spLen }, { strokeDashoffset: 0, duration: 0.85, ease: 'power1.inOut' }, 4.05);
+      t.fromTo($('spArea'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 }, 4.5);
+      t.fromTo($('spDot'), { attr: { r: 0 } }, { attr: { r: 4.5 }, duration: 0.3, ease: 'back.out(3)' }, 4.5);
+      t.fromTo($('spLbl'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 }, 4.55);
+      t.fromTo($('spBr'), { strokeDashoffset: brLen }, { strokeDashoffset: 0, duration: 0.4 }, 4.95);
+      t.fromTo($('spBrL'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 }, 5.1);
+
+      /* 5.3  TRACE: a sweep crosses the map north to south and each city lights as it passes */
+      reveal(t, $('rv2'), 5.3, 0.5);
+      var S0 = 5.95, SD = 2.0, sw = { v: 0 }, ys = CITIES.map(function (c) { return c.y; });
+      var yMin = ys[0] - 14, yMax = Math.max.apply(null, ys) + 10;
+      t.fromTo($('sweep'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, S0 - 0.1);
+      t.to(sw, { v: 1, duration: SD, ease: 'none', onUpdate: function () {
+        $('sweep').setAttribute('transform', 'translate(0,' + (yMin + (yMax - yMin) * sw.v) + ')');
+      } }, S0);
+      t.to($('sweep'), { autoAlpha: 0, duration: 0.25 }, S0 + SD);
+
+      var cnt = { n: 0 }, last = -1, endT = 0;
+      cityObjs.forEach(function (o, i) {
+        var ti = S0 + ((o.c.y - yMin) / (yMax - yMin)) * SD;
+        ti = Math.max(ti, last + 0.26); last = ti; endT = ti;
+        t.fromTo(o.glow, { attr: { r: 0 } }, { attr: { r: 17 }, duration: 0.5, ease: 'back.out(2)' }, ti);
+        t.fromTo(o.dot, { attr: { r: 0 } }, { attr: { r: 4.8 }, duration: 0.3, ease: 'back.out(3)' }, ti);
+        t.fromTo(o.rip, { attr: { r: 4 }, opacity: 0.8 }, { attr: { r: 26 }, opacity: 0, duration: 0.7, ease: 'power2.out' }, ti);
+        t.fromTo(o.tx, { '--m': 0 }, { '--m': 1, duration: 0.25 }, ti);
+        t.fromTo(o.li, { '--m': 0 }, { '--m': 1, duration: 0.25 }, ti);
+        t.fromTo(cnt, { n: i }, { n: i + 1, duration: 0.01, ease: 'none', immediateRender: false, onUpdate: function () {
+          $('cc').textContent = Math.round(cnt.n) + ' of 7 cities mapped';
+        } }, ti);
+      });
+      t.fromTo($('pill'), { autoAlpha: 0, y: 6, scale: 0.96 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: 'back.out(2)' }, endT + 0.45);
+
+      /* 8.4  CONFIRM: root cause card, the temperature counts down to the observed value */
+      var R0 = Math.max(8.4, endT + 0.9);
+      reveal(t, $('rv3'), R0, 0.5);
+      t.fromTo($('rcArrow'), { autoAlpha: 0, x: -6 }, { autoAlpha: 1, x: 0, duration: 0.3 }, R0 + 0.3);
+      var rc = { v: 160 };
+      t.fromTo(rc, { v: 160 }, { v: 134, duration: 0.8, ease: 'power2.inOut', immediateRender: false, onUpdate: function () { $('rcB').textContent = Math.round(rc.v); } }, R0 + 0.4);
+      t.fromTo($('rcP'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 }, R0 + 1.1);
+      t.fromTo($('tick'), { strokeDashoffset: 26 }, { strokeDashoffset: 0, duration: 0.4, ease: 'power2.out' }, R0 + 1.2);
+      t.call(function () {}, null, R0 + 1.7);
+
+      tl = t;
+    }, $('wsBody'));
+  }
+
+  /* ---------- controls ---------- */
+  function sync() {
+    if (!tl) return;
+    var time = tl.time(), dur = tl.duration(), idx = -1;
+    readout.textContent = time.toFixed(1) + ' / ' + dur.toFixed(1) + ' s';
+    scrub.value = Math.round(time / dur * 1000);
+    for (var i = 0; i < BEATS.length; i++) if (time >= BEATS[i]) idx = i;
+    beatEls.forEach(function (el, i) { el.classList.toggle('on', i === idx); el.classList.toggle('done', i < idx); });
+  }
+  function ui() { pauseBtn.textContent = (!tl || tl.paused()) ? 'Play' : 'Pause'; }
+  function toTop() { window.scrollTo(0, 0); }
+  function done() {
+    clearTimeout(loopTimer);
+    if (reduce) { ui(); return; }
+    loopTimer = setTimeout(function () { if (tl && !tl.paused() && tl.progress() === 1) { toTop(); tl.restart(); } }, 3000);
+  }
+  replayBtn.addEventListener('click', function () { clearTimeout(loopTimer); toTop(); tl.restart(); ui(); });
+  pauseBtn.addEventListener('click', function () {
+    clearTimeout(loopTimer);
+    if (tl.paused()) { if (tl.progress() === 1) { toTop(); tl.restart(); } else tl.play(); } else { tl.pause(); }
+    ui();
+  });
+  slowBtn.addEventListener('click', function () {
+    var on = slowBtn.getAttribute('aria-pressed') !== 'true';
+    slowBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    tl.timeScale(on ? 0.35 : 1);
+  });
+  scrub.addEventListener('input', function () {
+    clearTimeout(loopTimer); tl.pause(); tl.time(tl.duration() * scrub.value / 1000, false); ui();
+  });
+
+  var rT;
+  window.addEventListener('resize', function () {
+    if (!started) return;
+    clearTimeout(rT);
+    rT = setTimeout(function () {
+      var p = tl.progress(), wasPaused = tl.paused(), ts = tl.timeScale();
+      build(); tl.timeScale(ts); tl.progress(p, false);
+      if (wasPaused || p >= 1) tl.pause(); else tl.play();
+      ui();
+    }, 220);
+  });
+
+  function init() {
+    if (started) return; started = true;
+    build();
+    if (reduce) { follow = false; tl.progress(1, false); tl.pause(); }
+    else { tl.play(0); }
+    ui();
+  }
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontsReady, new Promise(function (r) { setTimeout(r, 1500); })]).then(init);
+})();
+</script>
+
+</body></html>

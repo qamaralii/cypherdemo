@@ -107,9 +107,40 @@ export function useSceneController(): SceneController {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Don't capture if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement || (e.target instanceof HTMLElement && e.target.isContentEditable)) return;
 
       switch (e.key) {
+        case 'Enter': {
+          if (e.defaultPrevented || e.isComposing) return;
+          if (e.repeat) { e.preventDefault(); return; }
+          const target = e.target instanceof HTMLElement ? e.target : null;
+          const choosingOption = target?.closest('.decision-option, .region-grid button, .channel-select button, .compensation-grid button');
+          // Ordinary focused buttons and expandable reports retain native activation.
+          if (!choosingOption && target?.closest('button, summary')) return;
+          e.preventDefault();
+          if (showHelp) { toggleHelp(); return; }
+          const selectors = [
+            '.comparison-human-view:not([inert]) .comparison-rail-agent',
+            '.opening-hook',
+            '.sp-cta-btn',
+            '[data-enter-primary]',
+            '.human-summary-yes',
+            '.comparison-agent-view:not([inert]) .approval-action',
+            '.outcome-customer-update',
+            '.customer-appreciation > button',
+          ];
+          const action = selectors.flatMap(selector => [...document.querySelectorAll<HTMLButtonElement>(selector)]).find(button =>
+            !button.closest('[inert]') && button.getClientRects().length > 0 && getComputedStyle(button).visibility !== 'hidden',
+          );
+          // A disabled primary action must never be bypassed during preparation.
+          if (action) {
+            if (!action.disabled) action.click();
+          } else if (scene === 'agentRace' || scene === 'resolution') {
+            if (document.querySelector('.workflow-outcome')) document.querySelector<HTMLButtonElement>('.race-footnote button')?.click();
+            else if (!paused) nextScene();
+          } else if (scene !== 'socialPost' && scene !== 'end' && !paused) nextScene();
+          break;
+        }
         case ' ':
           // Preserve native keyboard activation for approval and replay buttons.
           if (e.target instanceof HTMLElement && e.target.closest('button')) return;
@@ -181,7 +212,7 @@ export function useSceneController(): SceneController {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [togglePause, nextScene, prevScene, replay, toggleFullscreen, toggleHelp, hop]);
+  }, [togglePause, nextScene, prevScene, replay, toggleFullscreen, toggleHelp, hop, showHelp, scene, paused]);
 
   return {
     scene,

@@ -197,11 +197,11 @@ export const config = {
     finalCta: 'Review recommended action',
 
     humanSummary: {
-      headline: 'Human investigation still unresolved',
+      headline: 'Investigation progressing. Coordination takes time.',
       elapsed: '13 hrs 40 mins after Sarah’s post',
       detection: '@Ava, Social Media Intern, flagged Sarah’s complaint 3 hours after it was published. @Maya, Customer Care Lead, saw it 20 minutes later.',
-      confirmed: '@Priya confirmed batch HLD-2407-A was involved.',
-      unresolved: '@Marcus has not confirmed the sealing failure. @Elena cannot access the full list of affected stores. @Noah cannot complete the exposure analysis without that store data.',
+      confirmed: 'Batch identified',
+      unresolved: 'Root cause and affected stores still being verified.',
     },
     agentPrompt: {
       headline: 'Want to see the other way?',
@@ -343,7 +343,7 @@ export const config = {
     decisions: [
       {
         id: 'full' as const,
-        title: 'Withdraw stock + public statement',
+        title: 'Withdraw stock and issue public statement',
         description: 'Recall all 40 stores, issue a public statement, and resolve the customer complaint with personalised support and compensation.',
         agentCount: 3,
         badge: 'RECOMMENDED',
