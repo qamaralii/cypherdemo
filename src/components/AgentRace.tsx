@@ -126,6 +126,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
 
   const handlePrev = useCallback(() => {
     if (!workflowStage) {
+      if (humanStage === 'intro') return false;
       if (humanStage === 'summary') {
         setHumanStage('running');
         setHumanJumpMessage((current) => ({ step: HUMAN_MESSAGE_COUNT - 1, id: (current?.id ?? 0) + 1 }));

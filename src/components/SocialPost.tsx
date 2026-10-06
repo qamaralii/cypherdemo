@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { config } from '../config';
 
@@ -32,19 +32,20 @@ function formatCount(n: number): string {
 export function SocialPost({ lastFrameCanvas, paused, onAnimationComplete, onFindStores, post, imageSrc }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const bgRef = useRef<HTMLDivElement>(null);
+  const bgRef = useRef<HTMLCanvasElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const ctxRef = useRef<gsap.Context | null>(null);
   const [likeCount, setLikeCount] = useState(0);
 
   const socialPost = post ?? config.socialPost;
 
-  // Set background from captured last frame
-  useEffect(() => {
+  // Copy the decoded frame before paint, without waiting for an image URL to load.
+  useLayoutEffect(() => {
     if (lastFrameCanvas && bgRef.current) {
-      bgRef.current.style.backgroundImage = `url(${lastFrameCanvas.toDataURL()})`;
-      bgRef.current.style.backgroundSize = 'cover';
-      bgRef.current.style.backgroundPosition = 'center';
+      const background = bgRef.current;
+      background.width = lastFrameCanvas.width;
+      background.height = lastFrameCanvas.height;
+      background.getContext('2d')?.drawImage(lastFrameCanvas, 0, 0);
     }
   }, [lastFrameCanvas]);
 
@@ -60,7 +61,7 @@ export function SocialPost({ lastFrameCanvas, paused, onAnimationComplete, onFin
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       // Keep the captured scene visible while the post emerges from the phone.
-      tl.fromTo(bgRef.current, { opacity: 0 }, { opacity: 1, duration: reduced ? 0 : 0.6 });
+      tl.to({}, { duration: reduced ? 0 : 0.6 });
 
       // A restrained origin signal ties the digital post back to the physical phone.
       tl.fromTo('.social-phone-signal',
@@ -148,10 +149,11 @@ export function SocialPost({ lastFrameCanvas, paused, onAnimationComplete, onFin
   return (
     <div ref={containerRef} className={`scene-container social-post-scene${post ? ' social-post-update' : ''}`}>
       {/* Captured F3 scene remains fully visible behind the post. */}
-      <div
+      <canvas
         ref={bgRef}
-        className="social-post-background absolute inset-0 bg-navy"
+        className="social-post-background absolute inset-0 w-full h-full object-cover bg-navy"
         style={{ opacity: 1 }}
+        aria-hidden="true"
       />
 
       {!post && <div className="social-phone-signal" aria-hidden="true" />}
