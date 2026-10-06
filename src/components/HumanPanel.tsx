@@ -97,7 +97,7 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
 
   useEffect(() => {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const interval = reduced ? 0.9 : 4.5;
+    const interval = reduced ? 0.9 : 3.8;
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
         paused: true,
@@ -150,7 +150,7 @@ export function HumanPanel({ paused, guided = false, onComplete, collapsed = fal
   }, [jumpToEnd]);
   useEffect(() => {
     if (!jumpToMessage || !timeline.current) return;
-    const interval = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.9 : 4.5;
+    const interval = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.9 : 3.8;
     const nextStep = Math.max(0, Math.min(messages.length - 1, jumpToMessage.step));
     manuallyPaused.current = true;
     timeline.current.pause().time(nextStep * interval);

@@ -242,7 +242,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       ) : (
         <div ref={comparisonRef} className="workflow-comparison" data-view={viewingHumanReport ? 'human' : 'agent'} tabIndex={-1}>
         <div id="comparison-agent-view" className="comparison-agent-view" inert={viewingHumanReport} aria-hidden={viewingHumanReport}>
-        <ComparisonRail team="human" elapsed={820 / 1440 + comparisonElapsed / 30_000} onClick={toggleReport} expanded={viewingHumanReport} />
+        <ComparisonRail team="human" elapsed={820 / 1440 + comparisonElapsed / 60_000} onClick={toggleReport} expanded={viewingHumanReport} />
         <WorkflowPanel
           stage={workflowStage}
           paused={workflowPaused}
