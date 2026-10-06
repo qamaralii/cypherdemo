@@ -4,6 +4,7 @@ import { config } from '../config';
 import { InstagramPostCard } from './InstagramPostCard';
 import { BatchLabelScan } from './BatchLabelScan';
 import { SocialMediaAgentRun } from './SocialMediaAgentRun';
+import { RcaAgentRun, rcaTaskIndex } from './RcaAgentRun';
 
 export type WorkflowStage =
   | 'socialMedia'
@@ -90,6 +91,8 @@ export function WorkflowPanel(props: Props) {
      ? visualProgress >= .8 ? 3 : visualProgress >= 5.7 / 12 ? 2 : visualProgress >= 3.75 / 12 ? 1 : 0
      : stage === 'socialMedia'
        ? visualProgress >= 15 / 19 ? 3 : visualProgress >= 9.2 * 15 / (12.4 * 19) ? 2 : visualProgress >= 4.6 * 15 / (12.4 * 19) ? 1 : 0
+     : stage === 'rca'
+       ? rcaTaskIndex(visualProgress)
      : Math.min(2, Math.floor(progress * 3));
    const preparing = ['resolution', 'recall', 'comms', 'support'].includes(stage) && progress < 1;
    const controlsPaused = paused || preparing || Boolean(approvalFeedback);
@@ -150,7 +153,7 @@ export function WorkflowPanel(props: Props) {
               {stage === 'socialMedia' && <SocialMediaAgentRun progress={visualProgress} />}
               {(stage === 'orchestrator' || stage === 'orchestratorApproval') && <OrchestratorVisual progress={visualProgress} ready={stage === 'orchestratorApproval'} onAdvance={() => props.onApproval('orchestratorApproval')} paused={paused || Boolean(approvalFeedback)} />}
               {stage === 'identification' && <BatchLabelScan progress={visualProgress} />}
-              {stage === 'rca' && <RcaVisual progress={visualProgress} />}
+              {stage === 'rca' && <RcaAgentRun progress={visualProgress} />}
               {stage === 'resolution' && <ResolutionVisual progress={progress} decision={decision} onChoose={props.onChooseDecision} onAdvance={props.onAdvance} paused={controlsPaused} />}
               {stage === 'recall' && <RecallVisual progress={progress} selectedRegions={selectedRegions} selectedStores={selectedStores} onToggle={props.onToggleRegion} onSetRegions={props.onSetRegions} onAdvance={() => props.onApproval('recall')} paused={controlsPaused} />}
               {stage === 'comms' && <CommsVisual progress={progress} draft={publicDraft} channels={selectedChannels} onDraft={props.onPublicDraft} onToggle={props.onToggleChannel} onAdvance={() => props.onApproval('comms')} paused={controlsPaused} />}
@@ -225,34 +228,6 @@ function OrchestratorVisual({ progress, ready, onAdvance, paused }: Pick<Props, 
   const activePlanIndex = planItems.findIndex(([, , drafted]) => !drafted);
   const visiblePlanItems = planItems.slice(0, ready ? 3 : responseReady ? 3 : causeReady ? 2 : batchReady ? 1 : 0);
   return <div className="orchestrator-workspace"><svg className={`orchestrator-graph${responseReady ? ' plan-ready' : ''}`} viewBox="0 0 640 310" role="img" aria-label="Semantic context graph connecting incident evidence sources"><defs><radialGradient id="incident-core-glow"><stop stopColor="#d96239" stopOpacity=".22" /><stop offset="1" stopColor="#d96239" stopOpacity="0" /></radialGradient></defs><g className="semantic-field"><ellipse cx="320" cy="156" rx="112" ry="78" /><ellipse cx="320" cy="156" rx="186" ry="117" /><ellipse cx="320" cy="156" rx="266" ry="146" /></g><g className="semantic-edges">{graphSources.map((source) => <path key={source.id} className={source.active ? 'active' : ''} d={`M${source.x} ${source.y} Q${(source.x + 320) / 2} ${(source.y + 156) / 2 - 18} 320 156`} />)}</g><g className={`semantic-core${responseReady ? ' ready' : ''}`}><circle cx="320" cy="156" r="63" /><circle cx="320" cy="156" r="43" /><circle cx="320" cy="156" r="25" /><text className="core-kicker" x="320" y="145" textAnchor="middle">ACTIVE INCIDENT</text><text className="core-batch" x="320" y="162" textAnchor="middle">HLD-2407-A</text><text className="core-detail" x="320" y="178" textAnchor="middle">{responseReady ? 'Plan ready' : 'Customer complaint'}</text></g>{graphSources.map((source, sourceIndex) => { const labelAbove = source.y > 210; const labelY = source.y + (labelAbove ? -31 : 35); const detailY = source.y + (labelAbove ? -20 : 46); return <g key={source.id} className={`semantic-source tier-${source.tier}${source.active ? ' active' : ''}`} style={{ '--source-x': source.x, '--source-y': source.y } as CSSProperties}>{Array.from({ length: source.satellites }, (_, satelliteIndex) => { const angle = sourceIndex * .66 + satelliteIndex * (Math.PI * 2 / source.satellites); const sx = source.x + Math.cos(angle) * 31; const sy = source.y + Math.sin(angle) * 25; return <g key={satelliteIndex}><line className="source-satellite-edge" x1={source.x} y1={source.y} x2={sx} y2={sy} /><circle className="source-satellite" cx={sx} cy={sy} r="2.6" /></g>; })}<circle className="source-halo" cx={source.x} cy={source.y} r="25" /><circle className="source-mark" cx={source.x} cy={source.y} r="17" /><text className="source-glyph" x={source.x} y={source.y + 4} textAnchor="middle">{source.glyph}</text><text className="source-label" x={source.x} y={labelY} textAnchor="middle">{source.label}</text><text className="source-detail" x={source.x} y={detailY} textAnchor="middle">{source.detail}</text></g>; })}</svg><section className="orchestrator-plan merged-approval"><ApprovalHeading title="Approve the incident plan" />{visiblePlanItems.length === 0 && <p className="orchestrator-gathering">Gathering connected evidence…</p>}{visiblePlanItems.map(([title, detail, drafted], index) => <div key={title} className={`${drafted ? 'drafted' : ''}${activePlanIndex === index && !ready ? ' active' : ''}`}><i>{index + 1}</i><p><b>{title}</b><small>{detail}</small></p><em>{drafted ? 'Drafted' : 'Drafting'}</em></div>)}<button className="approval-action" disabled={paused || !ready} onClick={onAdvance}>{ready ? 'Approve plan' : 'Preparing incident plan'} →</button></section></div>;
-}
-
-function RcaVisual({ progress }: { progress: number }) {
-  const anomaliesFound = progress >= 0.25;
-  const correlated = progress >= 0.41;
-  const mapVisible = progress >= 0.59;
-  const resultReady = progress >= 0.77;
-  const scanned = Math.min(184_260, Math.round((Math.min(progress, 0.25) / 0.25) * 184_260));
-  const cityProgress = Math.min(7, Math.floor(Math.max(0, (progress - 0.59) / 0.18) * 8));
-  const rows = Array.from({ length: 9 }, (_, index) => {
-    const temperatures = [160, 159, 160, 158, 160, 159, 160, 158];
-    const anomaly = anomaliesFound && (index === 3 || index === 6);
-    return {
-      time: anomaly ? (index === 3 ? '08:14:22' : '08:17:08') : `08:${String(2 + (index * 3) % 54).padStart(2, '0')}:${String((index * 7) % 60).padStart(2, '0')}`,
-      batch: anomaly || index % 3 === 0 ? 'HLD-2407-A' : `HLD-24${String(5 + index).padStart(2, '0')}-B`,
-      temperature: anomaly ? (index === 3 ? 134 : 136) : temperatures[index % temperatures.length]!,
-      anomaly,
-    };
-  });
-  const cities = [
-    ['Glasgow', 184, 38], ['Manchester', 176, 120], ['Leeds', 216, 105], ['Birmingham', 197, 159], ['Cardiff', 158, 181], ['Bristol', 177, 196], ['London', 238, 208],
-  ] as const;
-  return <div className="rca-workspace rca-story">
-    <div className="factory-log live-log"><div><b>Factory log search</b><span>Line 4 · 08 July</span></div><header><span>Scanning production records</span><strong>{new Intl.NumberFormat('en-GB').format(scanned)} / 184,260</strong></header><section>{rows.map((row, index) => <p key={index} className={row.anomaly ? 'anomaly' : ''}><i>{row.anomaly ? '!' : '›'}</i><time>{row.time}</time><b>{row.batch}</b><span>Seal temp {row.temperature}°C</span><em>{row.anomaly ? 'Anomaly' : 'Normal'}</em></p>)}</section></div>
-    <div className={`rca-correlation${correlated ? ' visible' : ''}`}><span>BATCH CORRELATION</span><strong>HLD-2407-A matches the Line 4 temperature anomalies</strong><p>Expected 160°C · Observed 134°C · 18-minute temperature drop</p></div>
-    <div className={`uk-exposure-map${mapVisible ? ' visible' : ''}`}><header><span>AFFECTED STORE EXPOSURE</span><small>{cityProgress} of 7 cities mapped</small></header><svg viewBox="0 0 420 250" role="img" aria-label="United Kingdom map showing affected cities"><path className="uk-outline" d="M180 14c18 5 27 19 25 34l12 15-4 21 16 15-4 22 13 18-12 17 10 22-13 19 5 27-20 15-11 24-20-4-12-27-17-9-5-27-19-19 4-24-12-21 12-23-5-26 13-18 2-27 18-17 2-24 18-13Z" /><path className="ireland-outline" d="M99 115l14-15 17 8 4 23-11 21-16-3-10-18 2-16Z" />{cities.map(([name, x, y], index) => <g key={name} className={`uk-city${index < cityProgress ? ' active' : ''}`}><circle cx={x} cy={y} r="6" /><text x={x + 10} y={y + 4}>{name}</text></g>)}</svg>{resultReady && <div className="map-result"><strong>40 affected stores</strong><span>across 7 UK cities</span></div>}</div>
-    <div className={`rca-final-result${resultReady ? ' visible' : ''}`}><span>ROOT CAUSE CONFIRMED</span><strong>160°C → 134°C temperature drop</strong><p>Batch HLD-2407-A reached 40 stores across 7 cities.</p></div>
-  </div>;
 }
 
 function ResolutionVisual({ progress, decision, onChoose, onAdvance, paused }: { progress: number; decision: Decision | null; onChoose: (decision: Decision) => void; onAdvance: () => void; paused: boolean }) {
