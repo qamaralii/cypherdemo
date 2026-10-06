@@ -1,0 +1,669 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Social Media Agent Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:wght@600;700&display=swap">
+<style>
+/* Layout: sticky toolbar, then the agent-workspace frame. Header swaps through four states; below it the
+   Instagram post (left, covered by a streaming feed at first) and the agent's cards (right). */
+:root {
+  --page: #F3EEE6; --surface: #FDFBF8; --surface-2: #F8F4EE; --line: #E4DCCF;
+  --ink: #2A251F; --ink-2: #6F6558; --ink-3: #A29887; --brown: #8A5A2B;
+  --teal: #22A79D; --teal-ink: #14736C; --teal-soft: #E8F8F5; --teal-line: #93D9D1;
+  --green: #4E8B3A; --green-ink: #3B5E29; --green-soft: #EDF3E4; --green-line: #B1C799;
+  --blue: #5B7DB6; --blue-ink: #3E5C8F; --blue-soft: #EDF2FA; --blue-line: #B9C8E0;
+  --orange: #D9803F; --orange-ink: #8A4A22; --orange-soft: #FFF2E8; --orange-line: #F1CBB0;
+  --dis: #DD4560; --av: #C9505F;
+  --font-ui: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+    --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+    --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+    --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+    --blue: #7FA0DB; --blue-ink: #A9C1EA; --blue-soft: #1A2433; --blue-line: #35507A;
+    --orange: #F0A064; --orange-ink: #F0B48A; --orange-soft: #33231A; --orange-line: #6B4630;
+    --dis: #F0617B; --av: #D96A78;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+  --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+  --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+  --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+  --blue: #7FA0DB; --blue-ink: #A9C1EA; --blue-soft: #1A2433; --blue-line: #35507A;
+  --orange: #F0A064; --orange-ink: #F0B48A; --orange-soft: #33231A; --orange-line: #6B4630;
+  --dis: #F0617B; --av: #D96A78;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45; padding: 0 16px 48px; }
+.wrap { max-width: 980px; margin-inline: auto; }
+
+/* ---------- toolbar ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding-block: 14px; background: var(--page); border-bottom: 1px solid var(--line); }
+.ttl { min-width: 0; }
+h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.ttl p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.btn { font: 600 12px var(--font-ui); letter-spacing: 0.04em; min-height: 44px; padding: 0 16px; border-radius: 10px; cursor: pointer; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn:hover { border-color: var(--teal-line); }
+.btn[aria-pressed="true"] { background: var(--teal-soft); border-color: var(--teal-line); color: var(--teal-ink); }
+.btn:focus-visible, #scrub:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.scrub { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+#scrub { width: clamp(110px, 20vw, 220px); accent-color: var(--teal); }
+.readout { font: 500 12px var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 9ch; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.err { margin: 12px 0 0; color: var(--ink-2); font-size: 13px; }
+
+/* ---------- workspace frame ---------- */
+.ws { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.ws-head { display: flex; justify-content: space-between; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); font: 600 11px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.ws-head span:first-child { color: var(--brown); }
+.ws-head span:last-child { color: var(--ink-3); }
+.ws-body { padding: clamp(14px, 3vw, 28px); }
+.lbl { font: 600 10px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.lbl.brown { color: #B2512F; }
+.lbl.teal { color: var(--teal-ink); }
+.lbl.blue { color: var(--blue-ink); }
+.lbl.green { color: var(--green-ink); }
+.lbl.orange { color: var(--orange-ink); }
+:root[data-theme="dark"] .lbl.brown { color: #F0A58A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lbl.brown { color: #F0A58A; } }
+
+/* ---------- header: four states stacked in one grid cell so nothing jumps ---------- */
+.hd { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px 24px; flex-wrap: wrap; padding-bottom: 12px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.sw { display: grid; }
+.sw > span { grid-area: 1 / 1; }
+.sw > span:not(:first-child) { opacity: 0; visibility: hidden; }
+.hd h2 { margin: 6px 0 0; font: 700 clamp(24px, 4.4vw, 32px)/1.12 var(--font-serif); letter-spacing: -0.005em; color: var(--ink); text-wrap: balance; }
+.hd-r { text-align: right; max-width: 300px; font-size: 11.5px; line-height: 1.35; }
+.hd-r .src { color: var(--ink-2); font-weight: 600; justify-items: end; }
+.hd-r .stat { color: var(--green-ink); font-weight: 700; margin-top: 2px; justify-items: end; }
+.hd-r .stat > span { opacity: 0; visibility: hidden; }
+
+/* ---------- grid ---------- */
+.grid { position: relative; display: grid; grid-template-columns: minmax(0, 370px) minmax(0, 1fr); gap: 20px 40px; align-items: start; }
+.left { min-width: 0; }
+.right { min-width: 0; display: flex; flex-direction: column; padding-top: 104px; }
+
+/* ---------- instagram post ---------- */
+.igwrap { position: relative; border-radius: 14px; }
+.post { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.ph { display: flex; align-items: center; gap: 13px; padding: 10px 12px; }
+.av { position: relative; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--av); color: #fff; display: grid; place-items: center; font: 700 11px var(--font-ui); font-style: normal; }
+.ph b { font-size: 12.5px; font-weight: 700; }
+.ph time { margin-left: auto; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ph svg { flex: none; width: 16px; height: 16px; fill: var(--ink); }
+.apulse { position: absolute; inset: -1px; border-radius: 50%; border: 2px solid var(--teal); opacity: 0; pointer-events: none; }
+.abadge { position: absolute; right: -6px; bottom: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--teal); border: 2px solid var(--surface); display: grid; place-items: center; transform: scale(0); }
+.abadge svg { width: 8px; height: 8px; fill: none; stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+.pimg { aspect-ratio: 370 / 404; background: var(--surface-2); overflow: hidden; }
+.pimg img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%; }
+.pa { display: flex; align-items: center; gap: 12px; padding: 10px 12px 2px; }
+.pa .dis { width: 24px; height: 24px; border-radius: 50%; background: var(--dis); display: grid; place-items: center; }
+.pa .dis svg { width: 13px; height: 13px; fill: #fff; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pa svg.ic { width: 17px; height: 17px; fill: none; stroke: var(--ink); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.pa .bm { margin-left: auto; }
+.pm { padding: 4px 12px 12px; font-size: 12.5px; line-height: 1.4; }
+.pm .lk { display: block; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+.pm p { margin: 0 0 2px; }
+.pm p b { font-weight: 700; }
+.mn { --w: 1; border-radius: 4px; padding: 0 3px; margin-inline: -1px; color: var(--teal-ink); font-weight: 600; background: linear-gradient(color-mix(in srgb, var(--teal) 20%, transparent), color-mix(in srgb, var(--teal) 20%, transparent)) left center / calc(var(--w) * 100%) 100% no-repeat; }
+.pm .va { display: block; margin-top: 8px; color: var(--ink-3); font-size: 12px; }
+.pm .ago { display: block; margin-top: 4px; color: var(--ink-3); font-size: 9.5px; letter-spacing: 0.06em; }
+
+/* ---------- feed overlay (the stream the agent is listening to) ---------- */
+.feed { position: absolute; inset: 0; z-index: 3; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.feed-list { will-change: transform; }
+.sk { --k: 0; position: relative; padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 9px; overflow: hidden; background: color-mix(in srgb, var(--teal-soft) calc(var(--k) * 100%), transparent); }
+.sk .h { display: flex; align-items: center; gap: 9px; flex: none; }
+.sk .c { width: 24px; height: 24px; border-radius: 50%; flex: none; background: color-mix(in srgb, var(--teal-line) calc(var(--k) * 100%), var(--line)); }
+.sk .b { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--teal-line) calc(var(--k) * 100%), var(--line)); }
+.sk .im { flex: 1; min-height: 0; border-radius: 8px; background: color-mix(in srgb, var(--teal-line) calc(var(--k) * 60%), var(--surface-2)); }
+.sk.hit { --k: 0; align-items: stretch; justify-content: center; gap: 6px; background: var(--surface); }
+.sk.hit .t { font-size: 12.5px; line-height: 1.35; color: var(--ink); }
+.sk.hit .t b { font-weight: 700; }
+.sk.hit .h b { font-size: 12.5px; }
+.tagb { position: absolute; right: 12px; top: 10px; padding: 3px 8px; border-radius: 999px; font: 700 9.5px var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; background: var(--teal); color: #fff; opacity: 0; visibility: hidden; }
+.hitring { position: absolute; inset: 0; border: 2px solid var(--teal); border-radius: 0; background: color-mix(in srgb, var(--teal-soft) 80%, transparent); opacity: 0; pointer-events: none; }
+.fd-top { position: absolute; left: 0; right: 0; top: 0; height: 250px; z-index: 1; pointer-events: none; background: linear-gradient(color-mix(in srgb, var(--surface) 82%, transparent), color-mix(in srgb, var(--surface) 38%, transparent)); }
+.reader { position: absolute; left: 0; right: 0; top: 250px; height: 0; z-index: 2; pointer-events: none; border-top: 1.5px solid var(--teal); box-shadow: 0 0 14px 1px color-mix(in srgb, var(--teal) 55%, transparent); }
+.reader span { position: absolute; right: 10px; top: -9px; padding: 1px 7px; border-radius: 999px; background: var(--teal); color: #fff; font: 700 9px var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ---------- step chips ---------- */
+.steps { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.steps li { --m: 0; display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 999px; font: 700 10px var(--font-ui); letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--green-ink) calc(var(--m) * 100%), var(--ink-3));
+  background: color-mix(in srgb, var(--green-soft) calc(var(--m) * 100%), transparent);
+  border: 1px solid color-mix(in srgb, var(--green-line) calc(var(--m) * 100%), var(--line)); }
+.steps li i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--green) calc(var(--m) * 100%), var(--ink-3)); background: color-mix(in srgb, var(--green) calc(var(--m) * 100%), transparent); }
+
+/* ---------- right-hand cards ---------- */
+.reveal { height: 0; overflow: hidden; opacity: 0; visibility: hidden; }
+.reveal > .card { margin-top: 16px; }
+.card { border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); padding: 16px 18px; }
+.card h3 { margin: 4px 0 0; font-size: clamp(16px, 2.4vw, 19px); font-weight: 700; letter-spacing: -0.005em; line-height: 1.25; text-wrap: balance; }
+.card p { margin: 5px 0 0; font-size: 13px; color: var(--ink-2); }
+.card p b, .card h3 b { font-weight: 700; }
+
+.c1 { display: grid; background: var(--teal-soft); border-color: var(--teal-line); }
+.c1 > div { grid-area: 1 / 1; display: flex; align-items: center; gap: 14px; min-width: 0; }
+.c1 .fB { opacity: 0; visibility: hidden; }
+.c1 h3 { color: var(--teal-ink); }
+.c1 p .at { color: var(--teal-ink); font-weight: 700; }
+.c1 .sm { display: block; margin-top: 4px; font-size: 11.5px; font-weight: 700; color: var(--green-ink); }
+.radar { position: relative; flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--teal-line); background: radial-gradient(circle, transparent 0 26%, color-mix(in srgb, var(--teal-line) 55%, transparent) 26.5% 28%, transparent 28.5% 58%, color-mix(in srgb, var(--teal-line) 55%, transparent) 58.5% 60%, transparent 60.5%); }
+.radar .sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg 250deg, color-mix(in srgb, var(--teal) 55%, transparent) 360deg); }
+.radar .core { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--teal); }
+.radar .ping { position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--teal); opacity: 0; }
+.chk { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--teal); display: grid; place-items: center; }
+.chk svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; }
+.rb { margin-left: auto; text-align: right; flex: none; }
+.rb b { display: block; font: 600 20px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--teal-ink); line-height: 1; }
+.rb span { font: 600 9px var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+
+.c2 { background: var(--blue-soft); border-color: var(--blue-line); border-left: 3px solid var(--blue); }
+.thread { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.bub { display: grid; align-self: flex-start; max-width: min(100%, 440px); padding: 9px 13px; border-radius: 14px 14px 14px 4px; background: var(--surface); border: 1px solid var(--blue-line); font-size: 14px; line-height: 1.45; color: var(--ink); }
+.bub > span { grid-area: 1 / 1; }
+.bub .ghost { visibility: hidden; }
+.bub b { font-weight: 700; }
+.bub .cur { display: inline-block; width: 1.5px; height: 1em; margin-left: 1px; background: var(--blue-ink); vertical-align: -2px; }
+.sent { display: flex; align-items: center; gap: 6px; font: 600 11px var(--font-ui); color: var(--blue-ink); opacity: 0; visibility: hidden; }
+.sent svg { width: 15px; height: 10px; fill: none; stroke: var(--teal); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.note { margin: 8px 0 0; font-size: 11px; color: var(--ink-2); }
+.c2 .note { margin: 0; opacity: 0; visibility: hidden; }
+.inrow { display: grid; justify-items: start; }
+.inrow > * { grid-area: 1 / 1; }
+.dots { display: inline-flex; gap: 4px; align-items: center; padding: 11px 14px; border-radius: 14px 14px 14px 4px; background: var(--surface); border: 1px solid var(--blue-line); }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); display: block; }
+.rep { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--teal-soft); border: 1px solid var(--teal-line); color: var(--teal-ink); font: 700 11.5px var(--font-ui); opacity: 0; visibility: hidden; }
+.rep svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.dots.gone { }
+
+.c3 { background: var(--green-soft); border-color: var(--green-line); display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.c3 .nm { margin-left: 12px; font-size: 15px; font-weight: 700; color: var(--ink); }
+.c3 .row { display: flex; align-items: baseline; flex-wrap: wrap; }
+.c3 .chk { background: var(--green); }
+
+.c4 { background: var(--orange-soft); border-color: var(--orange-line); }
+.c4 h3 { font-size: 15px; font-weight: 600; color: var(--orange-ink); line-height: 1.4; }
+.flow { display: flex; align-items: center; gap: 0; margin-top: 14px; }
+.pls { flex: none; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.pl { height: 30px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px 0 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--orange-line); font: 600 11.5px var(--font-ui); color: var(--orange-ink); white-space: nowrap; opacity: 0; visibility: hidden; }
+.pl i { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
+.wires { flex: 0 1 80px; min-width: 44px; height: 108px; overflow: visible; }
+.wires path { fill: none; stroke: var(--orange-line); stroke-width: 1.6; stroke-linecap: round; }
+.wires circle { fill: var(--orange); }
+.orch { --m: 0; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 98px; height: 66px; border-radius: 12px; font: 700 11.5px var(--font-ui); letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--orange-ink) calc(var(--m) * 100%), var(--ink-3));
+  background: color-mix(in srgb, var(--surface) 100%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--orange) calc(var(--m) * 100%), var(--line));
+  box-shadow: 0 0 0 calc(var(--m) * 5px) color-mix(in srgb, var(--orange) 16%, transparent); }
+.orch svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- beat legend ---------- */
+.beats { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.beats li { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); opacity: 0.6; transition: opacity 0.2s, border-color 0.2s, background-color 0.2s; }
+.beats li.done { opacity: 0.85; }
+.beats li.on { opacity: 1; border-color: var(--teal-line); background: var(--teal-soft); }
+.beats b { display: block; font-size: 13px; font-weight: 700; }
+.beats small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12px; line-height: 1.35; }
+.beats time { display: block; margin-top: 6px; font: 500 11px var(--font-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.fly { position: absolute; left: 0; top: 0; z-index: 8; pointer-events: none; opacity: 0; visibility: hidden; }
+.fly i { position: absolute; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px 2px color-mix(in srgb, var(--teal) 55%, transparent); }
+
+@media (max-width: 760px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .left { max-width: 420px; margin-inline: auto; width: 100%; }
+  .right { padding-top: 0; }
+  .hd-r { text-align: left; max-width: none; }
+  .hd-r .src, .hd-r .stat { justify-items: start; }
+}
+@media (max-width: 640px) {
+  .ws-head { padding-inline: 16px; }
+  .card { padding: 14px; }
+  .orch { width: 86px; }
+  .pl { font-size: 11px; padding-right: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <h1>Social media agent run</h1>
+      <p>Animation prototype</p>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="replay" type="button">Replay</button>
+      <button class="btn" id="pause" type="button">Pause</button>
+      <button class="btn" id="slow" type="button" aria-pressed="false">Slow motion</button>
+      <div class="scrub">
+        <label class="sr" for="scrub">Scrub through the animation</label>
+        <input id="scrub" type="range" min="0" max="1000" value="0" step="1">
+        <span class="readout" id="readout">0.0 / 0.0 s</span>
+      </div>
+    </div>
+  </header>
+  <p class="err" id="err" hidden>The animation library did not load, so the finished state is shown. Reload to try again.</p>
+
+  <section class="ws" aria-label="Agent workspace, social media agent">
+    <div class="ws-head"><span>Agent Workspace</span><span>Live workspace</span></div>
+    <div class="ws-body" id="wsBody">
+
+      <div class="hd">
+        <div>
+          <div class="lbl brown">Social media agent</div>
+          <h2 class="sw" id="swT">
+            <span>Listening for brand mentions</span>
+            <span>Complaint post found</span>
+            <span>Reaching out to Sarah</span>
+            <span>Ready to start the investigation</span>
+          </h2>
+        </div>
+        <div class="hd-r">
+          <div class="sw src" id="swS">
+            <span>Instagram &middot; @YummChips</span>
+            <span>Instagram &middot; sarah_mitchell</span>
+            <span>Instagram &middot; direct message</span>
+            <span>Instagram &middot; sarah_mitchell</span>
+          </div>
+          <div class="sw stat" id="swR"><span>Sarah&rsquo;s post, contact details, and product information are ready</span></div>
+        </div>
+      </div>
+
+      <div class="grid" id="grid">
+        <div class="left">
+          <div class="igwrap" id="igwrap">
+            <article class="post" id="post" aria-label="Instagram post by sarah_mitchell">
+              <div class="ph">
+                <i class="av" id="av"><span class="apulse" id="apulse"></span>S<span class="abadge" id="abadge"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5"></path></svg></span></i>
+                <b>sarah_mitchell</b><time>09:00</time>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.4"></circle><circle cx="8" cy="8" r="1.4"></circle><circle cx="13" cy="8" r="1.4"></circle></svg>
+              </div>
+              <div class="pimg"><img src="scan-photo.jpg" alt="Chips on a plate, several covered in mould, with the open bag beside them"></div>
+              <div class="pa">
+                <span class="dis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"></path><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" fill="none"></path></svg></span>
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle></svg>
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"></path></svg>
+                <svg class="ic bm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z"></path></svg>
+              </div>
+              <div class="pm">
+                <span class="lk" id="lk">61,200 dislikes</span>
+                <p><b>sarah_mitchell</b> Just opened <span class="mn" id="mn1">@YummChips</span>. How is this okay?</p>
+                <p><b>jake.rodriguez</b> <span class="mn" id="mn2">@YummChips</span>, this is disgusting.</p>
+                <p><b>healthwatch_official</b> <span class="mn" id="mn3">@YummChips</span>, has anyone contacted the manufacturer?</p>
+                <span class="va">View all 847 comments</span>
+                <span class="ago">2 HOURS AGO</span>
+              </div>
+            </article>
+            <div class="feed" id="feed" aria-hidden="true">
+              <div class="feed-list" id="feedList"></div>
+              <div class="fd-top"></div>
+              <div class="reader"><span>Listening</span></div>
+            </div>
+          </div>
+          <ol class="steps" id="steps">
+            <li><i></i>1. Tag detected</li>
+            <li><i></i>2. Contact details collected</li>
+            <li><i></i>3. Incident handed off</li>
+          </ol>
+        </div>
+
+        <div class="right" id="right">
+
+          <div class="card c1" id="c1">
+            <div class="fA" id="fA">
+              <div class="radar" aria-hidden="true"><div class="sweep" id="sweep"></div><div class="core"></div><div class="ping" id="ping"></div></div>
+              <div>
+                <div class="lbl teal">Listening</div>
+                <h3>Watching for @YummChips tags</h3>
+              </div>
+              <div class="rb"><b id="mc">0</b><span>Mentions found</span></div>
+            </div>
+            <div class="fB" id="fB">
+              <span class="chk" aria-hidden="true"><svg viewBox="0 0 16 16"><path id="tk1" d="M3.6 8.3l3 3 5.8-6.2"></path></svg></span>
+              <div>
+                <h3>Brand mention found</h3>
+                <p><span class="at">@YummChips</span> appears in the post and comments</p>
+                <span class="sm">Detected immediately after publishing</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="reveal" id="rv2">
+            <div class="card c2">
+              <div class="lbl blue">Personalised outreach draft</div>
+              <div class="thread">
+                <div class="bub" id="bub">
+                  <span class="ghost">Hi Sarah, we&rsquo;re sorry about the <b>YummChips</b> product you found. We&rsquo;d like to investigate and help.</span>
+                  <span class="typed" id="typed"></span>
+                </div>
+                <p class="note" id="note">Built from Sarah&rsquo;s name, product complaint, and brand context.</p>
+                <div class="sent" id="sent">
+                  <svg viewBox="0 0 18 12" aria-hidden="true"><path d="M1.5 6.5l3.2 3.2L11 2.5"></path><path d="M7.6 8.6l1.1 1.1L16 2.5"></path></svg>
+                  Sent via Instagram
+                </div>
+                <div class="reveal" id="rvIn">
+                  <div class="inrow" style="margin-top:0">
+                    <div class="dots" id="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+                    <div class="rep" id="rep"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 6.4l2.6 2.6 5-5.4"></path></svg>Reply received</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="reveal" id="rv3">
+            <div class="card c3">
+              <div>
+                <div class="row"><span class="lbl green">Contact details collected</span><span class="nm" id="nm">Sarah Mitchell</span></div>
+                <p id="cp">Preferred contact recorded &middot; consent captured</p>
+              </div>
+              <span class="chk" aria-hidden="true"><svg viewBox="0 0 16 16"><path id="tk3" d="M3.6 8.3l3 3 5.8-6.2"></path></svg></span>
+            </div>
+          </div>
+
+          <div class="reveal" id="rv4">
+            <div class="card c4">
+              <div class="lbl orange">Investigation ready</div>
+              <h3>Sarah&rsquo;s complaint, contact details, and product evidence are ready for the Orchestrator</h3>
+              <div class="flow">
+                <div class="pls">
+                  <span class="pl"><i></i>Complaint post</span>
+                  <span class="pl"><i></i>Contact details</span>
+                  <span class="pl"><i></i>Product evidence</span>
+                </div>
+                <svg class="wires" id="wires" viewBox="0 0 80 108" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M0 15 C 40 15, 40 54, 80 54"></path>
+                  <path d="M0 54 L 80 54"></path>
+                  <path d="M0 93 C 40 93, 40 54, 80 54"></path>
+                  <circle r="3.2" cx="0" cy="15"></circle><circle r="3.2" cx="0" cy="54"></circle><circle r="3.2" cx="0" cy="93"></circle>
+                </svg>
+                <div class="orch" id="orch">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><circle cx="4.5" cy="5" r="1.8"></circle><circle cx="19.5" cy="5" r="1.8"></circle><circle cx="12" cy="20.5" r="1.8"></circle><path d="M6 6.3l4.1 3.9M18 6.3l-4.1 3.9M12 15v3.7"></path></svg>
+                  Orchestrator
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="fly" id="fly"><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <ol class="beats" id="beats">
+    <li data-t="0.3"><b>Listen</b><small>Posts stream past; the agent reads each for a tag</small><time>0.3 s</time></li>
+    <li data-t="2.5"><b>Find</b><small>The post tagging @YummChips is caught</small><time>2.5 s</time></li>
+    <li data-t="5.4"><b>Reach out</b><small>A personal message is drafted and sent</small><time>5.4 s</time></li>
+    <li data-t="9.0"><b>Collect</b><small>The reply arrives and contact details are recorded</small><time>9.0 s</time></li>
+    <li data-t="9.9"><b>Hand off</b><small>The case and its context go to the Orchestrator</small><time>9.9 s</time></li>
+  </ol>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var reveals = [$('rv2'), $('rvIn'), $('rv3'), $('rv4')];
+  var kids = function (el) { return Array.prototype.slice.call(el.children); };
+
+  /* ---------- the feed the agent listens to ---------- */
+  var HS = [150, 96, 120, 150, 96, 120, 96, 150], AFTER = [150, 96, 120, 150, 96, 86], HIT = 84, READER = 250, SPEED = 350;
+  var feedList = $('feedList'), skEls = [], tops = [], y = 0;
+  function skel(h) {
+    var d = document.createElement('div'); d.className = 'sk'; d.style.height = h + 'px';
+    var big = h >= 120;
+    d.innerHTML = '<div class="h"><i class="c"></i><div class="b" style="width:' + (36 + (h % 5) * 5) + '%"></div></div>' +
+      (big ? '<div class="im"></div><div class="b" style="width:68%"></div>' :
+        '<div class="b" style="width:88%"></div><div class="b" style="width:56%"></div>');
+    return d;
+  }
+  HS.forEach(function (h) { var d = skel(h); feedList.appendChild(d); skEls.push(d); tops.push(y); y += h; });
+  var HIT_TOP = y;
+  var hit = document.createElement('div'); hit.className = 'sk hit'; hit.style.height = HIT + 'px';
+  hit.innerHTML = '<span class="hitring" id="hitring"></span><div class="h"><i class="av">S</i><b>sarah_mitchell</b></div>' +
+    '<div class="t">Just opened <span class="mn" id="mnH">@YummChips</span>. How is this okay?</div><span class="tagb" id="tagb">Tag detected</span>';
+  feedList.appendChild(hit); y += HIT;
+  AFTER.forEach(function (h) { var d = skel(h); feedList.appendChild(d); skEls.push(d); y += h; });
+  var HIT_C = HIT_TOP + HIT / 2 - READER;       // how far the list travels until the post sits on the reader line
+  var PRE = 700;                                 // linear leg; the last leg eases onto the post
+
+  /* ---------- outreach message ---------- */
+  var FULL = 'Hi Sarah, we’re sorry about the YummChips product you found. We’d like to investigate and help.';
+  var B0 = FULL.indexOf('YummChips'), B1 = B0 + 9;
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function typedHTML(n) {
+    var o = esc(FULL.slice(0, Math.min(n, B0)));
+    if (n > B0) o += '<b>' + esc(FULL.slice(B0, Math.min(n, B1))) + '</b>';
+    if (n > B1) o += esc(FULL.slice(B1, n));
+    if (n > 0 && n < FULL.length) o += '<span class="cur"></span>';
+    return o;
+  }
+
+  /* ---------- page-level helpers ---------- */
+  var flyDots = kids($('fly'));
+  [10, 7, 5].forEach(function (s, i) { flyDots[i].style.width = flyDots[i].style.height = s + 'px'; });
+  function pt(el) {
+    var r = el.getBoundingClientRect(), g = $('grid').getBoundingClientRect();
+    return { x: r.left - g.left + r.width / 2, y: r.top - g.top + r.height / 2 };
+  }
+  function placeFly(v) {
+    var a = pt($('sent').querySelector('svg')), b = pt($('av')), cx = (a.x + b.x) / 2, cy = Math.min(a.y, b.y) - 70;
+    flyDots.forEach(function (d, k) {
+      var u = Math.max(0, v - k * 0.07), m = 1 - u;
+      var x = m * m * a.x + 2 * m * u * cx + u * u * b.x, yy = m * m * a.y + 2 * m * u * cy + u * u * b.y;
+      var s = parseFloat(d.style.width);
+      d.style.transform = 'translate(' + (x - s / 2) + 'px,' + (yy - s / 2) + 'px)';
+    });
+  }
+  function cubic(p0, p1, p2, p3, u) {
+    var m = 1 - u;
+    return m * m * m * p0 + 3 * m * m * u * p1 + 3 * m * u * u * p2 + u * u * u * p3;
+  }
+  var WY = [15, 54, 93];
+
+  var err = $('err');
+  function showAll(el) { el.style.opacity = 1; el.style.visibility = 'visible'; }
+  if (!window.gsap) {
+    err.hidden = false;
+    reveals.forEach(function (e) { e.style.height = 'auto'; showAll(e); });
+    $('feed').style.display = 'none';
+    ['swT', 'swS'].forEach(function (id) { var s = kids($(id)); s[0].style.visibility = 'hidden'; s[0].style.opacity = 0; showAll(s[3]); });
+    showAll(kids($('swR'))[0]);
+    $('fA').style.display = 'none'; showAll($('fB')); $('tk1').style.strokeDashoffset = 0; $('tk3').style.strokeDashoffset = 0;
+    $('typed').innerHTML = typedHTML(FULL.length); showAll($('sent')); showAll($('note')); $('dots').style.display = 'none'; showAll($('rep'));
+    kids($('right').querySelector('.pls')).forEach(showAll);
+    Array.prototype.forEach.call($('wires').querySelectorAll('path'), function () {});
+    $('orch').style.setProperty('--m', 1);
+    Array.prototype.forEach.call($('steps').children, function (li) { li.style.setProperty('--m', 1); });
+    $('abadge').style.transform = 'scale(1)';
+    return;
+  }
+
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var scrub = $('scrub'), readout = $('readout'), pauseBtn = $('pause'), slowBtn = $('slow'), replayBtn = $('replay');
+  var beatEls = kids($('beats'));
+  var BEATS = beatEls.map(function (el) { return parseFloat(el.getAttribute('data-t')); });
+  var ctx = null, tl = null, loopTimer = null, started = false, follow = true;
+
+  function follow_(el) {
+    if (!follow) return;
+    var r = el.getBoundingClientRect(), over = r.bottom - (window.innerHeight - 24);
+    if (over > 0) window.scrollBy(0, over);
+  }
+  function reveal(t, el, at, dur) {
+    t.fromTo(el, { height: 0, autoAlpha: 0 }, { height: 'auto', autoAlpha: 1, duration: dur, ease: 'power3.out', onUpdate: function () { follow_(el); } }, at);
+  }
+  function swap(t, a, b, at) {
+    t.fromTo(a, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.15, immediateRender: false }, at);
+    t.fromTo(b, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15, immediateRender: false }, at + 0.05);
+  }
+  function resetManual() {
+    feedList.style.transform = '';
+    $('typed').innerHTML = '';
+    $('lk').textContent = '0 dislikes';
+    $('mc').textContent = '0';
+    placeFly(0);
+  }
+
+  function build() {
+    if (ctx) ctx.revert();
+    resetManual();
+    var wirePaths = Array.prototype.slice.call($('wires').querySelectorAll('path'));
+    var wireLens = wirePaths.map(function (p) { return p.getTotalLength(); });
+    var wireDots = Array.prototype.slice.call($('wires').querySelectorAll('circle'));
+    var T = kids($('swT')), S = kids($('swS')), chips = kids($('steps'));
+
+    ctx = gsap.context(function () {
+      var t = gsap.timeline({ paused: true, defaults: { ease: 'power2.out' }, onUpdate: sync, onComplete: done });
+
+      /* 0.3  LISTEN: posts stream upward past the reader; each one flashes as it is read */
+      var T0 = 0.3, fv = { v: 0 };
+      function setFeed() { feedList.style.transform = 'translate3d(0,' + (-fv.v) + 'px,0)'; }
+      t.to(fv, { v: PRE, duration: PRE / SPEED, ease: 'none', onUpdate: setFeed }, T0);
+      t.fromTo(fv, { v: PRE }, { v: HIT_C, duration: 0.45, ease: 'power2.out', immediateRender: false, onUpdate: setFeed }, T0 + PRE / SPEED);
+      HS.forEach(function (h, i) {
+        var c = tops[i] + h / 2 - READER;
+        if (c > 0 && c <= PRE) t.to(skEls[i], { keyframes: { '--k': [0, 1, 0], easeEach: 'power1.inOut' }, duration: 0.5 }, T0 + c / SPEED - 0.25);
+      });
+      t.fromTo($('sweep'), { rotation: 0 }, { rotation: 540, duration: 2.35, ease: 'none' }, 0.2);
+      t.to($('sweep'), { autoAlpha: 0, duration: 0.3 }, 2.55);
+
+      /* 2.5  FIND: the tagged post lands on the reader and is caught */
+      t.to([$('feed').querySelector('.fd-top'), $('feed').querySelector('.reader')], { autoAlpha: 0, duration: 0.3 }, 2.4);
+      t.fromTo($('hitring'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 }, 2.45);
+      t.fromTo($('mnH'), { '--w': 0 }, { '--w': 1, duration: 0.35 }, 2.5);
+      t.fromTo($('tagb'), { autoAlpha: 0, scale: 0.8 }, { autoAlpha: 1, scale: 1, duration: 0.35, ease: 'back.out(3)' }, 2.55);
+      t.to($('ping'), { keyframes: { opacity: [0, 0.9, 0], scale: [0.8, 1.2, 2.1], easeEach: 'power2.out' }, duration: 0.8 }, 2.55);
+      var mc = { n: 0 };
+      t.fromTo(mc, { n: 0 }, { n: 1, duration: 0.01, ease: 'none', immediateRender: false, onUpdate: function () { $('mc').textContent = Math.round(mc.n); } }, 2.6);
+      swap(t, T[0], T[1], 2.7); swap(t, S[0], S[1], 2.7);
+      t.to(skEls, { opacity: 0.3, duration: 0.3 }, 2.9);
+      t.to($('feed'), { autoAlpha: 0, duration: 0.5, ease: 'power1.inOut' }, 3.3);
+
+      /* post is revealed: dislikes count up and each @YummChips tag is highlighted */
+      var lk = { n: 0 };
+      t.fromTo(lk, { n: 0 }, { n: 61200, duration: 0.8, ease: 'power2.out', immediateRender: false, onUpdate: function () {
+        $('lk').textContent = Math.round(lk.n).toLocaleString('en-US') + ' dislikes'; } }, 3.55);
+      t.fromTo($('mn1'), { '--w': 0 }, { '--w': 1, duration: 0.35 }, 3.9);
+      t.fromTo($('mn2'), { '--w': 0 }, { '--w': 1, duration: 0.35 }, 4.15);
+      t.fromTo($('mn3'), { '--w': 0 }, { '--w': 1, duration: 0.35 }, 4.4);
+      swap(t, $('fA'), $('fB'), 4.6);
+      t.fromTo($('fB').querySelector('.chk'), { scale: 0 }, { scale: 1, duration: 0.35, ease: 'back.out(3)' }, 4.7);
+      t.fromTo($('tk1'), { strokeDashoffset: 20 }, { strokeDashoffset: 0, duration: 0.35 }, 4.85);
+      t.fromTo(chips[0], { '--m': 0 }, { '--m': 1, duration: 0.3 }, 4.95);
+
+      /* 5.4  REACH OUT: draft, type, send; a dot carries it to Sarah and a reply comes back */
+      swap(t, T[1], T[2], 5.4); swap(t, S[1], S[2], 5.4);
+      reveal(t, $('rv2'), 5.5, 0.5);
+      t.fromTo($('note'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 }, 6.0);
+      var ty = { n: 0 };
+      t.fromTo(ty, { n: 0 }, { n: FULL.length, duration: 1.4, ease: 'none', immediateRender: false, onUpdate: function () {
+        $('typed').innerHTML = typedHTML(Math.round(ty.n)); } }, 6.0);
+      t.fromTo($('sent'), { autoAlpha: 0, y: 4 }, { autoAlpha: 1, y: 0, duration: 0.3 }, 7.45);
+      var fl = { v: 0 };
+      t.to($('fly'), { keyframes: { autoAlpha: [0, 1, 1, 0], easeEach: 'none' }, duration: 0.65 }, 7.6);
+      t.fromTo(fl, { v: 0 }, { v: 1, duration: 0.65, ease: 'power2.inOut', immediateRender: false, onUpdate: function () { placeFly(fl.v); } }, 7.6);
+      t.to($('apulse'), { keyframes: { opacity: [0, 0.9, 0], scale: [1, 1.2, 2], easeEach: 'power2.out' }, duration: 0.7 }, 8.2);
+      t.fromTo($('abadge'), { scale: 0 }, { scale: 1, duration: 0.35, ease: 'back.out(3)' }, 8.3);
+      reveal(t, $('rvIn'), 8.3, 0.25);
+      t.to(kids($('dots')), { y: -3, duration: 0.2, stagger: 0.08, repeat: 2, yoyo: true, ease: 'sine.inOut' }, 8.4);
+      swap(t, $('dots'), $('rep'), 9.0);
+
+      /* 9.2  COLLECT: contact details recorded */
+      reveal(t, $('rv3'), 9.2, 0.5);
+      t.fromTo($('nm'), { autoAlpha: 0, x: -6 }, { autoAlpha: 1, x: 0, duration: 0.35 }, 9.45);
+      t.fromTo($('cp'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, 9.55);
+      t.fromTo($('rv3').querySelector('.chk'), { scale: 0 }, { scale: 1, duration: 0.35, ease: 'back.out(3)' }, 9.5);
+      t.fromTo($('tk3'), { strokeDashoffset: 20 }, { strokeDashoffset: 0, duration: 0.35 }, 9.65);
+      t.fromTo(chips[1], { '--m': 0 }, { '--m': 1, duration: 0.3 }, 9.65);
+
+      /* 9.9  HAND OFF: three pieces of context travel into the Orchestrator */
+      swap(t, T[2], T[3], 9.95); swap(t, S[2], S[3], 9.95);
+      reveal(t, $('rv4'), 10.0, 0.5);
+      t.fromTo(kids($('rv4').querySelector('.pls')), { autoAlpha: 0, x: -8 }, { autoAlpha: 1, x: 0, duration: 0.35, stagger: 0.12 }, 10.4);
+      wirePaths.forEach(function (p, i) {
+        p.style.strokeDasharray = wireLens[i];
+        t.fromTo(p, { strokeDashoffset: wireLens[i] }, { strokeDashoffset: 0, duration: 0.45 }, 10.9 + i * 0.08);
+      });
+      wireDots.forEach(function (d, i) {
+        var o = { v: 0 }, y0 = WY[i];
+        t.to(d, { keyframes: { opacity: [0, 1, 1, 0], easeEach: 'none' }, duration: 0.6 }, 11.0 + i * 0.08);
+        t.fromTo(o, { v: 0 }, { v: 1, duration: 0.6, ease: 'power1.inOut', immediateRender: false, onUpdate: function () {
+          d.setAttribute('cx', cubic(0, 40, 40, 80, o.v)); d.setAttribute('cy', cubic(y0, y0, 54, 54, o.v)); } }, 11.0 + i * 0.08);
+      });
+      t.fromTo($('orch'), { '--m': 0 }, { '--m': 1, duration: 0.3 }, 11.55);
+      t.fromTo(chips[2], { '--m': 0 }, { '--m': 1, duration: 0.3 }, 11.8);
+      t.fromTo(kids($('swR'))[0], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 }, 11.9);
+      t.call(function () {}, null, 12.4);
+
+      tl = t;
+    }, $('wsBody'));
+  }
+
+  /* ---------- controls ---------- */
+  function sync() {
+    if (!tl) return;
+    var time = tl.time(), dur = tl.duration(), idx = -1;
+    readout.textContent = time.toFixed(1) + ' / ' + dur.toFixed(1) + ' s';
+    scrub.value = Math.round(time / dur * 1000);
+    for (var i = 0; i < BEATS.length; i++) if (time >= BEATS[i]) idx = i;
+    beatEls.forEach(function (el, i) { el.classList.toggle('on', i === idx); el.classList.toggle('done', i < idx); });
+  }
+  function ui() { pauseBtn.textContent = (!tl || tl.paused()) ? 'Play' : 'Pause'; }
+  function toTop() { window.scrollTo(0, 0); }
+  function done() {
+    clearTimeout(loopTimer);
+    if (reduce) { ui(); return; }
+    loopTimer = setTimeout(function () { if (tl && !tl.paused() && tl.progress() === 1) { toTop(); tl.restart(); } }, 3000);
+  }
+  replayBtn.addEventListener('click', function () { clearTimeout(loopTimer); toTop(); tl.restart(); ui(); });
+  pauseBtn.addEventListener('click', function () {
+    clearTimeout(loopTimer);
+    if (tl.paused()) { if (tl.progress() === 1) { toTop(); tl.restart(); } else tl.play(); } else { tl.pause(); }
+    ui();
+  });
+  slowBtn.addEventListener('click', function () {
+    var on = slowBtn.getAttribute('aria-pressed') !== 'true';
+    slowBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    tl.timeScale(on ? 0.35 : 1);
+  });
+  scrub.addEventListener('input', function () {
+    clearTimeout(loopTimer); tl.pause(); tl.time(tl.duration() * scrub.value / 1000, false); ui();
+  });
+
+  var rT;
+  window.addEventListener('resize', function () {
+    if (!started) return;
+    clearTimeout(rT);
+    rT = setTimeout(function () {
+      var p = tl.progress(), wasPaused = tl.paused(), ts = tl.timeScale();
+      build(); tl.timeScale(ts); tl.progress(p, false);
+      if (wasPaused || p >= 1) tl.pause(); else tl.play();
+      ui();
+    }, 220);
+  });
+
+  function init() {
+    if (started) return; started = true;
+    build();
+    if (reduce) { follow = false; tl.progress(1, false); tl.pause(); }
+    else { tl.play(0); }
+    ui();
+  }
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontsReady, new Promise(function (r) { setTimeout(r, 1500); })]).then(init);
+})();
+</script>
+
+</body></html>

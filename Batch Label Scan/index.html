@@ -1,0 +1,669 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Batch Label Scan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a toolbar, the agent-workspace frame holding a photo stage on top and the
+   extracted-code chip -> production-database card underneath, then a beat legend. */
+:root {
+  --page: #F3EEE6;
+  --surface: #FDFBF8;
+  --surface-2: #F8F4EE;
+  --line: #E4DCCF;
+  --ink: #2A251F;
+  --ink-2: #6F6558;
+  --ink-3: #A29887;
+  --brown: #8A5A2B;
+  --teal: #22A79D;
+  --teal-ink: #14736C;
+  --teal-soft: #E8F8F5;
+  --teal-line: #93D9D1;
+  --green: #4E8B3A;
+  --green-ink: #3B5E29;
+  --green-soft: #EDF3E4;
+  --green-line: #B1C799;
+  --amber: #CF8A22;
+  --tag-bg: #C4F4EC;
+  --tag-ink: #0A3A35;
+  --photo-a: #EBD5A9;
+  --photo-b: #C9944F;
+  --font-ui: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+    --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+    --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+    --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+    --amber: #E3A24C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+  --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+  --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+  --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+  --amber: #E3A24C;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  padding: 28px 16px 48px;
+}
+.wrap { max-width: 980px; margin-inline: auto; }
+
+/* ---------- toolbar ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.ttl { min-width: 0; }
+h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.ttl p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.btn {
+  font: 600 12px var(--font-ui); letter-spacing: 0.04em;
+  min-height: 44px; padding: 0 16px; border-radius: 10px; cursor: pointer;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+}
+.btn:hover { border-color: var(--teal-line); }
+.btn[aria-pressed="true"] { background: var(--teal-soft); border-color: var(--teal-line); color: var(--teal-ink); }
+.btn:focus-visible, #scrub:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.scrub { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+#scrub { width: clamp(120px, 22vw, 240px); accent-color: var(--teal); }
+.readout { font: 500 12px var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 9ch; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.err { margin: 12px 0 0; color: var(--ink-2); font-size: 13px; }
+
+/* ---------- workspace frame ---------- */
+.ws { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.ws-head {
+  display: flex; justify-content: space-between; gap: 12px; padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  font: 600 11px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.ws-head span:first-child { color: var(--brown); }
+.ws-head span:last-child { color: var(--ink-3); }
+.ws-body { position: relative; padding: clamp(14px, 3vw, 28px); }
+
+/* ---------- stage: stand-in for the customer photo ---------- */
+.stage {
+  position: relative; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; isolation: isolate;
+  background: #CDB99C;
+}
+.photo { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 46%; display: block; max-width: none; }
+.label-anchor, .pack-anchor { position: absolute; pointer-events: none; }
+
+.scanned {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; clip-path: inset(0 0 100% 0);
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--teal) 70%, transparent) 1px, transparent 1.6px) 0 0 / 18px 18px,
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--teal) 10%, transparent) 0 1px, transparent 1px 6px),
+    color-mix(in srgb, var(--teal) 6%, transparent);
+}
+.vf {
+  position: absolute; inset: 12px; z-index: 3; pointer-events: none; opacity: 0;
+  background:
+    linear-gradient(var(--teal), var(--teal)) 0 0 / 20px 2px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 0 0 / 2px 20px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 100% 0 / 20px 2px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 100% 0 / 2px 20px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 0 100% / 20px 2px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 0 100% / 2px 20px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 100% 100% / 20px 2px no-repeat,
+    linear-gradient(var(--teal), var(--teal)) 100% 100% / 2px 20px no-repeat;
+}
+.beam {
+  position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 4; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--teal) 12%, var(--teal) 88%, transparent);
+  box-shadow: 0 0 16px 3px color-mix(in srgb, var(--teal) 55%, transparent);
+}
+.beam::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 2px; height: 80px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--teal) 24%, transparent));
+}
+.bracket {
+  position: absolute; z-index: 5; pointer-events: none; opacity: 0; left: 0; top: 0; width: 0; height: 0;
+  border: 2px solid var(--teal); border-radius: 3px;
+  background: color-mix(in srgb, var(--teal) 7%, transparent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35), 0 0 18px color-mix(in srgb, var(--teal) 45%, transparent);
+}
+.bracket .flash { position: absolute; inset: 0; opacity: 0; background: color-mix(in srgb, var(--teal) 24%, transparent); }
+.tag {
+  position: absolute; right: -2px; top: -2px; opacity: 0; white-space: nowrap;
+  font: 700 9px var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--tag-bg); color: var(--tag-ink); padding: 4px 8px;
+}
+.cone { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; overflow: visible; }
+.cone path { fill: var(--teal); fill-opacity: 0.11; stroke: var(--teal); stroke-opacity: 0.5; stroke-width: 1; }
+
+.zoom {
+  position: absolute; z-index: 8; right: 3%; bottom: 7%; max-width: 94%;
+  display: flex; align-items: center; gap: 16px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px 12px;
+  box-shadow: 0 14px 34px rgba(40, 25, 5, 0.28);
+}
+.zoom .tx { min-width: 0; }
+.thumb {
+  flex: none; width: 96px; height: 56px; border-radius: 6px; border: 1px solid var(--line);
+  background: #CDB99C url("scan-photo.jpg") no-repeat -466px -202px / 563px 563px;
+}
+.zoom .k { font: 600 9px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--brown); }
+.ocr { position: relative; display: inline-block; margin: 8px 0 6px; font: 600 clamp(14px, 2.5vw, 24px)/1.2 var(--font-mono); color: var(--ink); white-space: nowrap; }
+.ch { color: var(--teal-ink); opacity: 0.65; transition: color 0.12s, opacity 0.12s; }
+.ch.lk { color: var(--ink); opacity: 1; }
+.code {
+  display: inline-block; border-radius: 4px; margin-inline: -2px; padding-inline: 2px;
+  background: linear-gradient(var(--teal-soft), var(--teal-soft)) left center / calc(var(--w, 0) * 100%) 100% no-repeat;
+}
+.caret { position: absolute; left: 0; top: -2px; bottom: -2px; width: 2px; background: var(--teal); box-shadow: 0 0 8px var(--teal); opacity: 0; }
+
+.status {
+  position: absolute; left: 26px; bottom: 26px; z-index: 9; height: 28px; min-width: 190px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 999px;
+  font: 600 10px var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-ink);
+}
+.status > span { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px; white-space: nowrap; opacity: 0; visibility: hidden; }
+.status > span:first-child { opacity: 1; visibility: visible; }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); flex: none; }
+.status b { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+
+/* ---------- flow: extracted chip -> database ---------- */
+.flow {
+  display: grid; grid-template-columns: minmax(190px, 0.42fr) minmax(0, 1fr);
+  gap: clamp(44px, 7vw, 76px); align-items: start; margin-top: clamp(40px, 6vw, 64px);
+}
+.chip {
+  position: relative; margin-top: 14px; padding: 14px 18px 16px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.tint { position: absolute; inset: -1px; border-radius: inherit; opacity: 0; pointer-events: none; }
+.chip .tint { background: var(--teal-soft); border: 1px solid var(--teal-line); }
+.lbl { position: relative; font: 600 9px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal-ink); }
+.chip .val { position: relative; height: 28px; margin-top: 6px; font: 600 20px/1.2 var(--font-mono); }
+.chip .ph, .chip .v { position: absolute; left: 0; top: 0; white-space: nowrap; }
+.chip .ph { color: var(--ink-3); letter-spacing: 0.2em; }
+.chip .v { color: var(--teal-ink); opacity: 0; }
+
+.db { position: relative; padding: 16px 20px 18px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.db .tint { background: var(--green-soft); border: 1px solid var(--green-line); }
+.db-top { position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.db .lbl { color: var(--green-ink); }
+.state { position: relative; height: 24px; margin-top: 8px; min-width: 0; }
+.state span { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 15px; color: var(--ink-2); opacity: 0; visibility: hidden; }
+.state span:first-child { opacity: 1; visibility: visible; }
+.dots::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4, end) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }
+.icon { position: relative; width: 22px; height: 22px; flex: none; margin-top: 2px; }
+.icon svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; opacity: 0; visibility: hidden; }
+.spin { fill: none; stroke: var(--teal); stroke-width: 2.4; stroke-linecap: round; animation: spin 0.8s linear infinite; transform-origin: 50% 50%; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.chk { fill: none; stroke: var(--green); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; }
+.ripple { position: absolute; inset: 0; border: 2px solid var(--green); border-radius: 50%; opacity: 0; }
+.divider { position: relative; height: 1px; background: var(--line); margin: 12px 0 8px; }
+.rows { position: relative; }
+.hl {
+  position: absolute; left: -8px; right: -8px; top: 0; height: 30px; opacity: 0; border-radius: 7px;
+  background: var(--teal-soft); border: 1px solid var(--teal-line);
+}
+.row {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 30px; overflow: hidden; opacity: 0.5;
+  font: 500 14px var(--font-mono); color: var(--ink-2);
+}
+.row .mark { font-size: 13px; color: var(--ink-3); opacity: 0; }
+.row.hit .t {
+  color: color-mix(in srgb, var(--green-ink) calc(var(--m, 0) * 100%), var(--ink-2));
+  font-weight: calc(500 + var(--m, 0) * 100);
+}
+.row.hit .mark { color: var(--green); }
+.pfx { display: inline-block; max-width: 0; overflow: hidden; white-space: pre; vertical-align: bottom; }
+.found { position: relative; height: 0; overflow: hidden; opacity: 0; }
+.found .d1 { padding-top: 6px; font-size: 13px; color: var(--ink-2); }
+.found .d2 { margin-top: 4px; font-size: 13px; color: var(--ink-2); }
+.found .d2 .txt {
+  padding: 1px 4px; margin-left: -4px; border-radius: 3px;
+  background: linear-gradient(color-mix(in srgb, var(--amber) 24%, transparent), color-mix(in srgb, var(--amber) 24%, transparent)) left center / calc(var(--w, 0) * 100%) 100% no-repeat;
+}
+
+.overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; overflow: visible; }
+.track { stroke: var(--ink-3); stroke-width: 1.5; stroke-dasharray: 2 6; stroke-linecap: round; opacity: 0.7; }
+.ln { stroke-width: 2; stroke-linecap: round; }
+.ln.t { stroke: var(--teal); } .ln.g { stroke: var(--green); opacity: 0; }
+.ar.t { fill: var(--teal); opacity: 0; } .ar.g { fill: var(--green); opacity: 0; }
+.packet { fill: var(--teal); opacity: 0; filter: drop-shadow(0 0 6px var(--teal)); }
+.ghost {
+  position: absolute; left: 0; top: 0; z-index: 25; opacity: 0; visibility: hidden; pointer-events: none;
+  font: 600 20px/1.2 var(--font-mono); color: var(--teal-ink); white-space: nowrap; transform-origin: 0 0;
+}
+
+/* ---------- beat legend ---------- */
+.beats { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.beats li { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); opacity: 0.6; transition: opacity 0.2s, border-color 0.2s, background-color 0.2s; }
+.beats li.done { opacity: 0.85; }
+.beats li.on { opacity: 1; border-color: var(--teal-line); background: var(--teal-soft); }
+.beats b { display: block; font-size: 13px; font-weight: 700; }
+.beats small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12px; line-height: 1.35; }
+.beats time { display: block; margin-top: 6px; font: 500 11px var(--font-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .stage { aspect-ratio: 4 / 3.3; }
+  .zoom { left: 4%; right: 4%; bottom: 5%; }
+  .thumb { display: none; }
+  .status { left: 26px; top: 56px; bottom: auto; }
+  .flow { grid-template-columns: minmax(0, 1fr); gap: 48px; }
+  .chip { margin-top: 0; }
+  .ws-head { padding-inline: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin, .dots::after { animation: none; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <h1>Batch label scan</h1>
+      <p>Animation prototype</p>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="replay" type="button">Replay</button>
+      <button class="btn" id="pause" type="button">Pause</button>
+      <button class="btn" id="slow" type="button" aria-pressed="false">Slow motion</button>
+      <div class="scrub">
+        <label class="sr" for="scrub">Scrub through the animation</label>
+        <input id="scrub" type="range" min="0" max="1000" value="0" step="1">
+        <span class="readout" id="readout">0.0 / 0.0 s</span>
+      </div>
+    </div>
+  </header>
+  <p class="err" id="err" hidden>The animation library did not load, so only the resting frame is shown. Reload to try again.</p>
+
+  <section class="ws" aria-label="Agent workspace, image identification">
+    <div class="ws-head"><span>Agent Workspace</span><span>Live workspace</span></div>
+    <div class="ws-body" id="wsBody">
+
+      <div class="stage" id="stage" role="img" aria-label="A customer photo of a bowl of mouldy chips beside an open pack, being scanned for the printed batch number">
+        <img class="photo" src="scan-photo.jpg" width="1254" height="1254" alt="">
+        <div class="pack-anchor" id="packAnchor"></div>
+        <div class="label-anchor" id="labelAnchor"></div>
+
+        <div class="scanned" id="scanned"></div>
+        <div class="vf" id="vf"></div>
+        <div class="beam" id="beam"></div>
+
+        <div class="bracket" id="bracket">
+          <div class="flash" id="flash"></div>
+          <span class="tag" id="tagA">Packaging detected</span>
+          <span class="tag" id="tagB">Printed label located</span>
+        </div>
+
+        <svg class="cone" id="cone" aria-hidden="true"><path id="conePath" d=""></path></svg>
+
+        <div class="zoom" id="zoom">
+          <div class="tx">
+            <div class="k">Enlarged package label</div>
+            <div class="ocr" id="ocr"><span id="ocrPre">BATCH NO: </span><span class="code" id="ocrCode">HLD-2407-A</span><span class="caret" id="caret"></span></div>
+            <div class="k">OCR focus</div>
+          </div>
+          <div class="thumb" aria-hidden="true"></div>
+        </div>
+
+        <div class="status" id="status" aria-hidden="true">
+          <span><i></i>Image received</span>
+          <span><i></i>Scanning image <b id="pct">0%</b></span>
+          <span><i></i>Locating label</span>
+          <span><i></i>Reading label (OCR)</span>
+          <span><i></i>Batch code extracted</span>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="chip" id="chip">
+          <span class="tint" id="chipTint"></span>
+          <div class="lbl">Extracted from image</div>
+          <div class="val"><span class="ph" id="chipPh">&middot;&middot;&middot;</span><span class="v" id="chipVal">HLD-2407-A</span></div>
+        </div>
+
+        <div class="db" id="db">
+          <span class="tint" id="dbTint"></span>
+          <div class="db-top">
+            <div>
+              <div class="lbl">Production database</div>
+              <div class="state" id="state">
+                <span>Waiting for a batch code</span>
+                <span class="dots">Searching production records</span>
+                <span>Production record found</span>
+              </div>
+            </div>
+            <div class="icon">
+              <span class="ripple" id="ripple"></span>
+              <svg id="spinSvg" viewBox="0 0 24 24" aria-hidden="true"><path class="spin" d="M12 3a9 9 0 1 1-9 9"></path></svg>
+              <svg id="chkSvg" viewBox="0 0 24 24" aria-hidden="true"><path class="chk" id="chkPath" d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="rows" id="rows">
+            <div class="hl" id="hl"></div>
+            <div class="row"><span class="t">HLD-2406-C</span><span class="mark">&ne;</span></div>
+            <div class="row"><span class="t">HLD-2406-F</span><span class="mark">&ne;</span></div>
+            <div class="row hit" id="rowHit"><span class="t"><span class="pfx" id="pfx">Batch </span>HLD-2407-A</span><span class="mark">=</span></div>
+            <div class="row"><span class="t">HLD-2407-B</span><span class="mark">&ne;</span></div>
+            <div class="row"><span class="t">HLD-2408-D</span><span class="mark">&ne;</span></div>
+          </div>
+          <div class="found" id="found">
+            <div class="d1">Line 4 &middot; 08 July</div>
+            <div class="d2"><span class="txt" id="d2txt">Released without quality hold</span></div>
+          </div>
+        </div>
+      </div>
+
+      <svg class="overlay" id="overlay" aria-hidden="true">
+        <line class="track" id="track"></line>
+        <line class="ln t" id="lnT"></line>
+        <line class="ln g" id="lnG"></line>
+        <path class="ar t" id="arT" d="M-10 -5.5L0 0L-10 5.5Z"></path>
+        <path class="ar g" id="arG" d="M-10 -5.5L0 0L-10 5.5Z"></path>
+        <circle class="packet" id="packet" r="4.5" cx="0" cy="0"></circle>
+      </svg>
+      <div class="ghost" id="ghost">HLD-2407-A</div>
+    </div>
+  </section>
+
+  <ol class="beats" id="beats">
+    <li data-t="0.5"><b>Scan</b><small>A beam sweeps the photo</small><time>0.5 s</time></li>
+    <li data-t="2.2"><b>Locate</b><small>The frame narrows to the pack, then the label</small><time>2.2 s</time></li>
+    <li data-t="3.75"><b>Read</b><small>The label lifts out and its characters resolve</small><time>3.8 s</time></li>
+    <li data-t="5.7"><b>Extract</b><small>The batch code moves into the result chip</small><time>5.7 s</time></li>
+    <li data-t="6.4"><b>Search</b><small>The code is checked against production records</small><time>6.4 s</time></li>
+    <li data-t="7.95"><b>Match</b><small>The matching record opens with its details</small><time>8.0 s</time></li>
+  </ol>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var err = $('err');
+  if (!window.gsap) { err.hidden = false; return; }
+
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var body = $('wsBody'), stage = $('stage');
+  var scrub = $('scrub'), readout = $('readout'), pauseBtn = $('pause'), slowBtn = $('slow'), replayBtn = $('replay');
+  var beatEls = Array.prototype.slice.call($('beats').children);
+  var BEATS = beatEls.map(function (el) { return parseFloat(el.getAttribute('data-t')); });
+
+  /* ---------- OCR characters ---------- */
+  var GL = 'ABCDEFGHKLMNPRTUXY0123456789';
+  function mk(host, str) {
+    host.textContent = '';
+    return Array.prototype.map.call(str, function (c) {
+      var s = document.createElement('span');
+      s.className = 'ch'; s.setAttribute('data-c', c);
+      s.textContent = c === ' ' ? ' ' : c;
+      host.appendChild(s); return s;
+    });
+  }
+  var chars = mk($('ocrPre'), 'BATCH NO: ').concat(mk($('ocrCode'), 'HLD-2407-A'));
+  var N = chars.length;
+  var statusEls = Array.prototype.slice.call($('status').children);
+  var stateEls = Array.prototype.slice.call($('state').children);
+  var rowEls = Array.prototype.slice.call($('rows').querySelectorAll('.row'));
+  var markEls = rowEls.map(function (r) { return r.querySelector('.mark'); });
+  var otherRows = rowEls.filter(function (r) { return r.id !== 'rowHit'; });
+  var ocrW = 0;
+
+  function setOcr(p) {
+    var k = p * (N + 4), tick = Math.floor(p * 45);
+    for (var i = 0; i < N; i++) {
+      var el = chars[i], c = el.getAttribute('data-c');
+      var fixed = (c === ' ' || c === ':' || c === '-');
+      var locked = k > i + 2;
+      el.classList.toggle('lk', locked);
+      el.textContent = (locked || fixed) ? (c === ' ' ? ' ' : c) : GL.charAt((i * 5 + tick * 11) % GL.length);
+    }
+    $('caret').style.transform = 'translateX(' + (Math.min(k, N) / N * ocrW) + 'px)';
+  }
+
+  /* ---------- where the label and pack sit in the photo (pixels of the 1254 x 1254 source) ---------- */
+  var IMG = 1254, OY = 0.46;                       /* OY matches object-position y in CSS */
+  var LABEL = { x: 1046, y: 452, w: 208, h: 116 };
+  var PACK = { x: 606, y: 0, w: 648, h: 748 };
+  function place(el, b) {
+    var W = stage.clientWidth, H = stage.clientHeight, sc = Math.max(W, H) / IMG;
+    var offX = (IMG * sc - W) * 0.5, offY = (IMG * sc - H) * OY;
+    el.style.left = (b.x * sc - offX) + 'px'; el.style.top = (b.y * sc - offY) + 'px';
+    el.style.width = (b.w * sc) + 'px'; el.style.height = (b.h * sc) + 'px';
+  }
+
+  /* ---------- geometry ---------- */
+  function rel(el, base) {
+    var r = el.getBoundingClientRect(), b = base.getBoundingClientRect();
+    return { x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height,
+             cx: r.left - b.left + r.width / 2, cy: r.top - b.top + r.height / 2,
+             r: r.right - b.left, b: r.bottom - b.top };
+  }
+  function hull(pts) {
+    pts = pts.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+    var lo = [], up = [], i, p;
+    for (i = 0; i < pts.length; i++) { p = pts[i]; while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+    for (i = pts.length - 1; i >= 0; i--) { p = pts[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+    up.pop(); lo.pop(); return lo.concat(up);
+  }
+  function corners(r) { return [[r.x, r.y], [r.r, r.y], [r.r, r.b], [r.x, r.b]]; }
+
+  /* ---------- timeline ---------- */
+  var ctx = null, tl = null, loopTimer = null, dragging = false, started = false;
+
+  function resetManual() {
+    $('beam').style.transform = '';
+    $('scanned').style.clipPath = 'inset(0 0 100% 0)';
+    $('pct').textContent = '0%';
+    ocrW = $('ocr').offsetWidth;
+    setOcr(0);
+  }
+
+  function swap(t, a, b, at) {
+    t.to(a, { autoAlpha: 0, duration: 0.15 }, at);
+    t.fromTo(b, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15, immediateRender: false }, at + 0.05);
+  }
+
+  function build() {
+    if (ctx) ctx.revert();
+    resetManual();
+
+    place($('labelAnchor'), LABEL); place($('packAnchor'), PACK);
+    var S = rel(stage, body), H = S.h;
+    var labelR = rel($('labelAnchor'), stage), packR = rel($('packAnchor'), stage);
+    var cardR = rel($('zoom'), stage);
+    var codeR = rel($('ocrCode'), body);
+    var chipR = rel($('chip'), body), dbR = rel($('db'), body), chipValR = rel($('chipVal'), body);
+    var cf = parseFloat(getComputedStyle($('ocrCode')).fontSize), vf = parseFloat(getComputedStyle($('chipVal')).fontSize);
+    var pad = 10;
+    function box(r) {
+      var l = Math.max(6, r.x - pad), t = Math.max(6, r.y - pad), rr = Math.min(S.w - 6, r.r + pad), bb = Math.min(S.h - 6, r.b + pad);
+      return { left: l, top: t, width: rr - l, height: bb - t };
+    }
+    var full = { left: 12, top: 12, width: S.w - 24, height: S.h - 24 };
+
+    // cone between the label and the enlarged card (stage coordinates)
+    var hp = hull(corners(labelR).concat(corners(cardR)));
+    $('conePath').setAttribute('d', 'M' + hp.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join('L') + 'Z');
+
+    // connector from chip to database (body coordinates)
+    var horiz = dbR.x > chipR.r - 4, x1, y1, x2, y2;
+    if (horiz) { x1 = chipR.r + 6; y1 = chipR.cy; x2 = dbR.x - 4; y2 = y1; }
+    else { x1 = chipR.cx; y1 = chipR.b + 4; x2 = x1; y2 = dbR.y - 4; }
+    var L = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    ['track', 'lnT', 'lnG'].forEach(function (id) {
+      var e = $(id); e.setAttribute('x1', x1); e.setAttribute('y1', y1); e.setAttribute('x2', x2); e.setAttribute('y2', y2);
+    });
+    $('lnT').style.strokeDasharray = L; $('lnG').style.strokeDasharray = L;
+    ['arT', 'arG'].forEach(function (id) { $(id).setAttribute('transform', 'translate(' + x2 + ' ' + y2 + ') rotate(' + ang + ')'); });
+    $('ghost').style.fontSize = cf + 'px';
+
+    ctx = gsap.context(function () {
+      var t = gsap.timeline({ paused: true, defaults: { ease: 'power2.out' }, onUpdate: sync, onComplete: done });
+
+      /* 0.1  viewfinder corners */
+      t.fromTo($('vf'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, 0.1);
+
+      /* 0.5  SCAN: beam sweeps top to bottom and leaves a faint grid behind it */
+      swap(t, statusEls[0], statusEls[1], 0.45);
+      t.fromTo($('beam'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15 }, 0.5);
+      var sp = { p: 0 };
+      t.to(sp, { p: 1, duration: 1.6, ease: 'sine.inOut', onUpdate: function () {
+        $('beam').style.transform = 'translate3d(0,' + (sp.p * (H - 2)) + 'px,0)';
+        $('scanned').style.clipPath = 'inset(0 0 ' + ((1 - sp.p) * 100) + '% 0)';
+        $('pct').textContent = Math.round(sp.p * 100) + '%';
+      } }, 0.5);
+      t.to($('beam'), { autoAlpha: 0, duration: 0.2 }, 2.1);
+
+      /* 2.2  LOCATE: a frame narrows from the whole photo to the pack, then to the label */
+      swap(t, statusEls[1], statusEls[2], 2.15);
+      t.fromTo($('bracket'), { autoAlpha: 0, left: full.left, top: full.top, width: full.width, height: full.height },
+        { autoAlpha: 1, duration: 0.2, immediateRender: true }, 2.2);
+      t.to($('bracket'), { left: box(packR).left, top: box(packR).top, width: box(packR).width, height: box(packR).height, duration: 0.6, ease: 'power3.inOut' }, 2.35);
+      t.fromTo($('tagA'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15 }, 2.8);
+      t.to($('tagA'), { autoAlpha: 0, duration: 0.12 }, 3.15);
+      t.to($('bracket'), { left: box(labelR).left, top: box(labelR).top, width: box(labelR).width, height: box(labelR).height, duration: 0.5, ease: 'power3.inOut' }, 3.1);
+      t.fromTo($('tagB'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15 }, 3.5);
+      t.fromTo($('flash'), { opacity: 0 }, { opacity: 1, duration: 0.12, yoyo: true, repeat: 1 }, 3.6);
+      t.to($('scanned'), { opacity: 0, duration: 0.5 }, 3.6);
+
+      /* 3.75  READ: the label lifts out as an enlarged card and straightens up */
+      var sc = Math.max(0.25, labelR.w / cardR.w);
+      t.fromTo($('zoom'),
+        { x: labelR.cx - cardR.cx, y: labelR.cy - cardR.cy, scale: sc, rotation: -22, autoAlpha: 0, transformOrigin: '50% 50%' },
+        { x: 0, y: 0, scale: 1, rotation: 0, autoAlpha: 1, duration: 0.85, ease: 'power3.inOut' }, 3.75);
+      t.fromTo($('conePath'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, 3.7);
+      t.to($('conePath'), { autoAlpha: 0, duration: 0.5 }, 4.45);
+
+      /* 4.45  OCR: characters cycle, then lock left to right behind a caret */
+      swap(t, statusEls[2], statusEls[3], 4.4);
+      t.fromTo($('caret'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1 }, 4.45);
+      var op = { p: 0 };
+      t.to(op, { p: 1, duration: 0.9, ease: 'none', onUpdate: function () { setOcr(op.p); } }, 4.5);
+      t.to($('caret'), { autoAlpha: 0, duration: 0.15 }, 5.4);
+      t.fromTo($('ocrCode'), { '--w': 0 }, { '--w': 1, duration: 0.3, ease: 'power2.inOut' }, 5.4);
+
+      /* 5.7  EXTRACT: the code lifts out of the card and lands in the chip */
+      t.fromTo($('ghost'), { x: codeR.x, y: codeR.y, scale: 1, autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05 }, 5.7);
+      t.to($('ghost'), { x: chipValR.x, y: chipValR.y, scale: vf / cf, duration: 0.65, ease: 'power3.inOut' }, 5.72);
+      t.to($('chipPh'), { autoAlpha: 0, duration: 0.1 }, 6.3);
+      t.to($('chipVal'), { autoAlpha: 1, duration: 0.1 }, 6.3);
+      t.to($('ghost'), { autoAlpha: 0, duration: 0.1 }, 6.34);
+      t.fromTo($('chipTint'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 6.25);
+      swap(t, statusEls[3], statusEls[4], 5.7);
+      t.to($('zoom'), { autoAlpha: 0, duration: 0.45 }, 6.15);
+      t.to($('bracket'), { autoAlpha: 0, duration: 0.3 }, 5.9);
+
+      /* 6.4  SEARCH: a packet travels to the database, a highlight steps down the records */
+      t.fromTo($('lnT'), { strokeDashoffset: L }, { strokeDashoffset: 0, duration: 0.6, ease: 'power2.inOut' }, 6.4);
+      t.fromTo($('arT'), { opacity: 0 }, { opacity: 1, duration: 0.12 }, 6.95);
+      var pp = { p: 0 };
+      t.fromTo($('packet'), { opacity: 0 }, { opacity: 1, duration: 0.06 }, 6.4);
+      t.to(pp, { p: 1, duration: 0.6, ease: 'power2.inOut', onUpdate: function () {
+        $('packet').setAttribute('cx', x1 + (x2 - x1) * pp.p); $('packet').setAttribute('cy', y1 + (y2 - y1) * pp.p);
+      } }, 6.4);
+      t.to($('packet'), { opacity: 0, duration: 0.12 }, 6.95);
+
+      swap(t, stateEls[0], stateEls[1], 7.0);
+      t.fromTo($('spinSvg'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15 }, 7.0);
+      t.to(rowEls, { opacity: 1, duration: 0.3 }, 7.0);
+      t.fromTo($('hl'), { autoAlpha: 0, y: 0 }, { autoAlpha: 1, duration: 0.15 }, 7.05);
+      t.fromTo(markEls[0], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1 }, 7.22);
+      t.to(rowEls[0], { opacity: 0.4, duration: 0.2 }, 7.36);
+      t.to($('hl'), { y: 30, duration: 0.12, ease: 'power2.inOut' }, 7.38);
+      t.fromTo(markEls[1], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1 }, 7.52);
+      t.to(rowEls[1], { opacity: 0.4, duration: 0.2 }, 7.64);
+      t.to($('hl'), { y: 60, duration: 0.12, ease: 'power2.inOut' }, 7.66);
+      t.fromTo(markEls[2], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1 }, 7.8);
+
+      /* 7.95  MATCH: row turns green, check draws, others fold away, details open */
+      t.fromTo($('rowHit'), { '--m': 0 }, { '--m': 1, duration: 0.25 }, 7.95);
+      t.fromTo($('dbTint'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, 7.95);
+      t.fromTo($('lnG'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 7.95);
+      t.fromTo($('arG'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, 7.95);
+      swap(t, stateEls[1], stateEls[2], 7.95);
+      t.to($('spinSvg'), { autoAlpha: 0, duration: 0.1 }, 7.95);
+      t.fromTo($('chkSvg'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05 }, 8.0);
+      t.fromTo($('chkPath'), { strokeDashoffset: 20 }, { strokeDashoffset: 0, duration: 0.35, ease: 'power2.out' }, 8.0);
+      t.fromTo($('ripple'), { scale: 0.6, autoAlpha: 0.6 }, { scale: 2.8, autoAlpha: 0, duration: 0.7 }, 8.0);
+      t.to($('hl'), { autoAlpha: 0, duration: 0.15 }, 8.1);
+      t.to(otherRows, { opacity: 0, duration: 0.25 }, 8.15);
+      t.to(otherRows, { height: 0, duration: 0.45, ease: 'power3.inOut' }, 8.15);
+      t.to($('pfx'), { maxWidth: 80, duration: 0.35 }, 8.2);
+      t.fromTo($('found'), { height: 0, autoAlpha: 0 }, { height: 'auto', autoAlpha: 1, duration: 0.45, ease: 'power3.out' }, 8.45);
+      t.fromTo(Array.prototype.slice.call($('found').children), { y: 6, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.3, stagger: 0.12 }, 8.55);
+      t.fromTo($('d2txt'), { '--w': 0 }, { '--w': 1, duration: 0.4, ease: 'power2.inOut' }, 9.0);
+      t.call(function () {}, null, 9.6);
+
+      tl = t;
+    }, body);
+  }
+
+  /* ---------- controls ---------- */
+  function sync() {
+    if (!tl) return;
+    var time = tl.time(), dur = tl.duration(), idx = -1;
+    readout.textContent = time.toFixed(1) + ' / ' + dur.toFixed(1) + ' s';
+    if (!dragging) scrub.value = Math.round(time / dur * 1000);
+    for (var i = 0; i < BEATS.length; i++) if (time >= BEATS[i]) idx = i;
+    beatEls.forEach(function (el, i) { el.classList.toggle('on', i === idx); el.classList.toggle('done', i < idx); });
+  }
+  function ui() { pauseBtn.textContent = (!tl || tl.paused()) ? 'Play' : 'Pause'; }
+  function done() {
+    clearTimeout(loopTimer);
+    if (reduce) { ui(); return; }
+    loopTimer = setTimeout(function () { if (tl && !tl.paused() && tl.progress() === 1) { tl.restart(); } }, 2600);
+  }
+  replayBtn.addEventListener('click', function () { clearTimeout(loopTimer); tl.restart(); ui(); });
+  pauseBtn.addEventListener('click', function () {
+    clearTimeout(loopTimer);
+    if (tl.paused()) { if (tl.progress() === 1) tl.restart(); else tl.play(); } else { tl.pause(); }
+    ui();
+  });
+  slowBtn.addEventListener('click', function () {
+    var on = slowBtn.getAttribute('aria-pressed') !== 'true';
+    slowBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    tl.timeScale(on ? 0.35 : 1);
+  });
+  scrub.addEventListener('input', function () {
+    clearTimeout(loopTimer); dragging = true;
+    tl.pause(); tl.time(tl.duration() * scrub.value / 1000, false);
+    dragging = false; ui();
+  });
+
+  var rT;
+  window.addEventListener('resize', function () {
+    if (!started) return;
+    clearTimeout(rT);
+    rT = setTimeout(function () {
+      var p = tl.progress(), wasPaused = tl.paused(), ts = tl.timeScale();
+      build(); tl.timeScale(ts); tl.progress(p, false);
+      if (wasPaused || p >= 1) tl.pause(); else tl.play();
+      ui();
+    }, 200);
+  });
+
+  function init() {
+    if (started) return; started = true;
+    build();
+    if (reduce) { tl.progress(1, false); tl.pause(); }
+    else { tl.play(0); }
+    ui();
+  }
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontsReady, new Promise(function (r) { setTimeout(r, 1500); })]).then(init);
+})();
+</script>
+
+</body></html>

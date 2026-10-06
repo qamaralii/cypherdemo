@@ -1,0 +1,766 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Orchestrator Agent Run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:wght@600;700&display=swap">
+<style>
+/* Layout: sticky toolbar, then the workspace frame: a white context-graph canvas on top and the incident plan below. */
+:root {
+  --page: #F3EEE6; --surface: #FDFBF8; --surface-2: #F8F4EE; --line: #E4DCCF;
+  --ink: #2A251F; --ink-2: #6F6558; --ink-3: #A29887; --brown: #8A5A2B;
+  --teal: #22A79D; --teal-ink: #14736C; --teal-soft: #E8F8F5; --teal-line: #93D9D1;
+  --green: #4E8B3A; --green-ink: #3B5E29; --green-soft: #EDF3E4; --green-line: #B1C799;
+  --blue: #5B7DB6; --blue-ink: #3E5C8F; --blue-soft: #EDF2FA; --blue-line: #B9C8E0;
+  --orange: #D9803F; --orange-ink: #8A4A22; --orange-soft: #FFF2E8; --orange-line: #F1CBB0;
+  --dis: #DD4560; --av: #C9505F;
+  --font-ui: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+    --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+    --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+    --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+    --blue: #7FA0DB; --blue-ink: #A9C1EA; --blue-soft: #1A2433; --blue-line: #35507A;
+    --orange: #F0A064; --orange-ink: #F0B48A; --orange-soft: #33231A; --orange-line: #6B4630;
+    --dis: #F0617B; --av: #D96A78;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #15120E; --surface: #1D1914; --surface-2: #231E18; --line: #3B342B;
+  --ink: #F2EBE0; --ink-2: #B5AA99; --ink-3: #7C7263; --brown: #DDA668;
+  --teal: #4CD3C7; --teal-ink: #86E6DC; --teal-soft: #11302D; --teal-line: #26615B;
+  --green: #7FC462; --green-ink: #BEDDA6; --green-soft: #1D2A17; --green-line: #405C2F;
+  --blue: #7FA0DB; --blue-ink: #A9C1EA; --blue-soft: #1A2433; --blue-line: #35507A;
+  --orange: #F0A064; --orange-ink: #F0B48A; --orange-soft: #33231A; --orange-line: #6B4630;
+  --dis: #F0617B; --av: #D96A78;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45; padding: 0 16px 48px; }
+.wrap { max-width: 980px; margin-inline: auto; }
+
+/* ---------- toolbar ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding-block: 14px; background: var(--page); border-bottom: 1px solid var(--line); }
+.ttl { min-width: 0; }
+h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.ttl p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.btn { font: 600 12px var(--font-ui); letter-spacing: 0.04em; min-height: 44px; padding: 0 16px; border-radius: 10px; cursor: pointer; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn:hover { border-color: var(--teal-line); }
+.btn[aria-pressed="true"] { background: var(--teal-soft); border-color: var(--teal-line); color: var(--teal-ink); }
+.btn:focus-visible, #scrub:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.scrub { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+#scrub { width: clamp(110px, 20vw, 220px); accent-color: var(--teal); }
+.readout { font: 500 12px var(--font-mono); color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 9ch; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.err { margin: 12px 0 0; color: var(--ink-2); font-size: 13px; }
+
+/* ---------- workspace frame ---------- */
+.ws { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.ws-head { display: flex; justify-content: space-between; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); font: 600 11px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.ws-head span:first-child { color: var(--brown); }
+.ws-head span:last-child { color: var(--ink-3); }
+.ws-body { padding: clamp(14px, 3vw, 28px); }
+.lbl { font: 600 10px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.lbl.brown { color: #B2512F; }
+.lbl.teal { color: var(--teal-ink); }
+.lbl.blue { color: var(--blue-ink); }
+.lbl.green { color: var(--green-ink); }
+.lbl.orange { color: var(--orange-ink); }
+:root[data-theme="dark"] .lbl.brown { color: #F0A58A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lbl.brown { color: #F0A58A; } }
+
+/* ---------- beat legend ---------- */
+.beats { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.beats li { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); opacity: 0.6; transition: opacity 0.2s, border-color 0.2s, background-color 0.2s; }
+.beats li.done { opacity: 0.85; }
+.beats li.on { opacity: 1; border-color: var(--teal-line); background: var(--teal-soft); }
+.beats b { display: block; font-size: 13px; font-weight: 700; }
+.beats small { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12px; line-height: 1.35; }
+.beats time { display: block; margin-top: 6px; font: 500 11px var(--font-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+
+/* ---- orchestrator additions ---- */
+:root { --acc: #D9653B; --acc-ink: #A8431F; --ln2: #D3CABA; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --acc: #F08A5E; --acc-ink: #F4A27D; --ln2: #4A4237; } }
+:root[data-theme="dark"] { --acc: #F08A5E; --acc-ink: #F4A27D; --ln2: #4A4237; }
+
+.sw { display: grid; }
+.sw > span { grid-area: 1 / 1; }
+.sw > span:not(:first-child) { opacity: 0; visibility: hidden; }
+.reveal { height: 0; overflow: hidden; opacity: 0; visibility: hidden; }
+
+.ws-body { --g: 0; padding: 0; }
+.sw { display: grid; }
+
+/* ---------- the graph: a white canvas, always white (the page theme only affects the plan below) ---------- */
+:root { --stg-dark: 0; }
+.gstage { position: relative; width: 100%; height: 520px; overflow: hidden; background: #FFFFFF; color: #2A251F; }
+#gcv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ghd { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 6px 20px; flex-wrap: wrap; padding: 14px clamp(14px, 3vw, 28px); pointer-events: none; }
+.ghd .lbl { color: rgba(42, 37, 31, 0.55); }
+.gl { display: flex; align-items: baseline; gap: 10px; }
+.gl b { font: 600 13px var(--font-mono); font-variant-numeric: tabular-nums; color: color-mix(in srgb, #2F8A2B calc(var(--g) * 100%), #2A251F); }
+.gr { font-size: 12px; color: rgba(42, 37, 31, 0.66); justify-items: end; }
+.gr > span { white-space: nowrap; }
+.ctrw { position: absolute; width: 112px; height: 80px; margin: -40px 0 0 -56px; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
+.ctr { text-align: center; }
+.ctr .k { font: 700 7.5px var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: color-mix(in srgb, #2F8A2B calc(var(--g) * 100%), #C4521F); }
+.ctr .id { margin-top: 2px; font: 600 14.5px var(--font-mono); color: #2A251F; }
+.ctr .st { display: grid; justify-items: center; margin-top: 3px; font-size: 10px; color: rgba(42, 37, 31, 0.72); }
+.ctr .st > span { white-space: nowrap; }
+
+/* ---------- plan ---------- */
+.plan { padding: clamp(16px, 3vw, 26px) clamp(14px, 3vw, 28px) clamp(18px, 3vw, 30px); border-top: 1px solid var(--line); }
+.plan .lbl { color: #B2512F; }
+:root[data-theme="dark"] .plan .lbl { color: #F0A58A; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .plan .lbl { color: #F0A58A; } }
+.plan h2 { margin: 6px 0 0; font: 700 clamp(24px, 4.4vw, 32px)/1.12 var(--font-serif); letter-spacing: -0.005em; color: var(--ink); }
+.steps { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 2px; }
+.pst { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 0 14px; align-items: start; padding: 7px 0 11px; }
+.no { position: relative; width: 26px; height: 26px; display: grid; place-items: center; font: 600 12px var(--font-ui); color: var(--green-ink); }
+.no svg { position: absolute; inset: 0; width: 26px; height: 26px; overflow: visible; transform: rotate(-90deg); }
+.no circle { fill: none; stroke: var(--green); stroke-width: 1.5; stroke-dasharray: 69.2; stroke-dashoffset: 69.2; }
+.no b { font-weight: 600; opacity: 0; visibility: hidden; }
+.tt { margin: 2px 0 0; display: grid; font: 700 15.5px/1.3 var(--font-ui); color: var(--green-ink); text-wrap: balance; }
+.tt > span { grid-area: 1 / 1; }
+.tt .g { visibility: hidden; }
+.sb2 { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-2); opacity: 0; visibility: hidden; }
+.pl { display: grid; justify-items: end; padding-top: 4px; font: 600 11px var(--font-ui); }
+.pl > span { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 5px; opacity: 0; visibility: hidden; white-space: nowrap; }
+.pl .d1 { color: var(--acc-ink); }
+.pl .d1 i { width: 3.5px; height: 3.5px; border-radius: 50%; background: currentColor; display: block; margin-left: -2px; }
+.pl .d1 i:first-of-type { margin-left: 1px; }
+.pl .d2 { color: var(--ink-3); }
+.pl .d2 svg { width: 11px; height: 11px; fill: none; stroke: var(--green); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; }
+.sp { position: absolute; left: 12.2px; top: 36px; bottom: -4px; width: 1.5px; background: var(--green-line); transform: scaleY(0); transform-origin: 50% 0; }
+
+@media (max-width: 640px) {
+  .ctr .id { font-size: 12.5px; }
+  .ws-head { padding-inline: 16px; }
+  .gr { display: none; }
+  .pst { grid-template-columns: 26px minmax(0, 1fr); }
+  .pl { grid-column: 2; justify-items: start; padding-top: 2px; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <h1>Orchestrator agent run</h1>
+      <p>Animation prototype</p>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="replay" type="button">Replay</button>
+      <button class="btn" id="pause" type="button">Pause</button>
+      <button class="btn" id="slow" type="button" aria-pressed="false">Slow motion</button>
+      <div class="scrub">
+        <label class="sr" for="scrub">Scrub through the animation</label>
+        <input id="scrub" type="range" min="0" max="1000" value="0" step="1">
+        <span class="readout" id="readout">0.0 / 0.0 s</span>
+      </div>
+    </div>
+  </header>
+  <p class="err" id="err" hidden>The animation library did not load, so the finished state is shown. Reload to try again.</p>
+
+  <section class="ws" aria-label="Semantic context graph and incident plan">
+    <div class="ws-head"><span>Semantic Context Graph</span><span>Live workspace</span></div>
+    <div class="ws-body" id="wsBody">
+
+      <div class="gstage" id="gstage">
+        <canvas id="gcv" role="img" aria-label="Company knowledge graph: ten business domains, each a dense cluster of connected records, linking into the active incident HLD-2407-A"></canvas>
+        <div class="ghd">
+          <div class="gl"><span class="lbl">Context linked</span><b id="gcnt">0 / 10</b></div>
+          <div class="gr sw"><span id="grA">Collating context across the business</span><span id="grB">Context collated</span></div>
+        </div>
+        <div class="ctrw" id="ctrw">
+          <div class="ctr" id="ctr">
+            <div class="k">Active incident</div>
+            <div class="id">HLD-2407-A</div>
+            <div class="st sw"><span id="stA">Collating context</span><span id="stB">Plan ready</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal" id="rvPlan">
+        <div class="plan">
+          <div class="lbl" id="pLbl">Incident plan drafting</div>
+          <h2 id="pTtl">What needs to happen next</h2>
+          <ol class="steps" id="steps">
+            <li class="pst">
+              <i class="no"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11"></circle></svg><b>1</b></i>
+              <div><h4 class="tt" data-full="Confirm the exact product batch"></h4><p class="sb2">HLD-2407-A identified from Sarah&rsquo;s post</p></div>
+              <div class="pl"><span class="d1">Drafting<i></i><i></i><i></i></span><span class="d2"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 6.4l2.6 2.6 5-5.4"></path></svg>Drafted</span></div>
+              <span class="sp"></span>
+            </li>
+            <li class="pst">
+              <i class="no"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11"></circle></svg><b>2</b></i>
+              <div><h4 class="tt" data-full="Find the cause and affected stores"></h4><p class="sb2">Check Line 4 logs and trace all deliveries</p></div>
+              <div class="pl"><span class="d1">Drafting<i></i><i></i><i></i></span><span class="d2"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 6.4l2.6 2.6 5-5.4"></path></svg>Drafted</span></div>
+              <span class="sp"></span>
+            </li>
+            <li class="pst">
+              <i class="no"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11"></circle></svg><b>3</b></i>
+              <div><h4 class="tt" data-full="Prepare clear response choices"></h4><p class="sb2">Withdraw stock, inform customers, and support Sarah</p></div>
+              <div class="pl"><span class="d1">Drafting<i></i><i></i><i></i></span><span class="d2"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 6.4l2.6 2.6 5-5.4"></path></svg>Drafted</span></div>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <ol class="beats" id="beats">
+    <li data-t="0"><b>Open</b><small>The incident appears and the company brain blooms around it</small><time>0.0 s</time></li>
+    <li data-t="0.9"><b>Link</b><small>Ten domains ignite one by one and stream their records into the incident</small><time>0.9 s</time></li>
+    <li data-t="3.5"><b>Draft</b><small>Plan steps are drafted; the domains each one draws on light up</small><time>3.5 s</time></li>
+    <li data-t="8.0"><b>Ready</b><small>Cross-links settle and the plan is marked ready</small><time>8.0 s</time></li>
+  </ol>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var kids = function (el) { return Array.prototype.slice.call(el.children); };
+  var TAU = Math.PI * 2;
+
+  /* ---------- the ten domains and the facts each brings (names and facts come from the workspace) ---------- */
+  var DOM = [
+    { n: 'Customer & Social', s: 'Post · tag · contact',    c: [214, 96, 232], l: [190, 70, 212], N: 190 },
+    { n: 'Customer Care',     s: 'Sarah case · support',        c: [244, 112, 154], l: [232, 84, 132], N: 95 },
+    { n: 'Product & Batch',   s: 'HLD-2407-A · label',          c: [47, 211, 196], l: [16, 170, 160],  N: 150 },
+    { n: 'Manufacturing',     s: 'Line 4 · shift',              c: [242, 163, 58], l: [232, 136, 16],  N: 135 },
+    { n: 'Quality',           s: 'Seal logs · hold',            c: [79, 181, 245], l: [44, 148, 232],  N: 110 },
+    { n: 'Warehouse',         s: 'Cartons · dispatches',        c: [232, 209, 75], l: [208, 164, 8],  N: 125 },
+    { n: 'Retail Exposure',   s: '40 stores · 7 cities',        c: [242, 106, 61], l: [238, 88, 44],  N: 175 },
+    { n: 'Sales',             s: 'Affected range',                   c: [123, 214, 107], l: [80, 168, 64], N: 80 },
+    { n: 'Compliance',        s: 'Recall · reporting',          c: [155, 123, 240], l: [126, 92, 226], N: 105 },
+    { n: 'Communications',    s: 'Statement · channels',        c: [108, 139, 255], l: [76, 108, 242], N: 115 }
+  ];
+  var XL = [[0, 1], [2, 3], [3, 4], [4, 8], [2, 5], [5, 6], [6, 7], [1, 9], [8, 9], [0, 2], [6, 3]];   // cross-link bundles between related domains
+  var FOCUS = [[0, 2], [3, 4, 5, 6], [8, 9, 1]];                                                        // domains each plan step draws on
+  var ORANGE = [240, 138, 94], GREEN = [127, 196, 98];
+
+  var PAL = null;
+  function readPal() {
+    var dark = (getComputedStyle(document.documentElement).getPropertyValue('--stg-dark') || '0').trim() === '1';
+    return dark
+      ? { dark: true, bg: '#0E0B09', hex: 'rgba(255,240,225,0.06)', dust: '255,235,215', halo: 'lighter', haloA: 0.7, glowA: 0.2, glowF: 0.28, grey: '176,166,154', greyA: 0.5, edgeD: 'rgba(176,166,154,0.08)', edgeL: 0.2, spoke: 'rgba(255,255,255,0.06)', thread: 1, lbl: [255, 255, 255], lblStroke: 'rgba(8,6,5,0.8)', ctrFill: '#15110D', track: 'rgba(255,255,255,0.12)', hubRing: [255, 255, 255] }
+      : { dark: false, bg: '#FFFFFF', hex: 'rgba(60,45,30,0.075)', dust: '60,45,30', halo: 'source-over', haloA: 0.2, glowA: 0.11, glowF: 0.17, grey: '150,140,128', greyA: 0.6, edgeD: 'rgba(120,108,95,0.15)', edgeL: 0.32, spoke: 'rgba(40,30,20,0.09)', thread: 1.5, lbl: [42, 37, 31], lblStroke: 'rgba(255,255,255,0.92)', ctrFill: '#FFFFFF', track: 'rgba(0,0,0,0.09)', hubRing: [42, 37, 31] };
+  }
+  function rng(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function mix(a, b, k) { return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]; }
+  function rgba(c, a) { return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a.toFixed(3) + ')'; }
+
+  var stage = $('gstage'), cv = $('gcv'), g2 = cv.getContext('2d'), G = null, tl = null, dpr = 1, lastCnt = -1;
+
+  function sprite(rgb, tight) {
+    var s = 64, c = document.createElement('canvas'); c.width = c.height = s;
+    var x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32), col = 'rgba(' + rgb.join(',') + ',';
+    if (tight) { gr.addColorStop(0, col + '0.95)'); gr.addColorStop(0.35, col + '0.55)'); gr.addColorStop(1, col + '0)'); }
+    else { gr.addColorStop(0, col + '1)'); gr.addColorStop(0.16, col + '0.9)'); gr.addColorStop(0.4, col + '0.24)'); gr.addColorStop(1, col + '0)'); }
+    x.fillStyle = gr; x.fillRect(0, 0, s, s); return c;
+  }
+
+  function curve(ax, ay, cx, cy, bx, by, n) {      // sampled quadratic
+    var out = new Float32Array(n * 2), i, u, m;
+    for (i = 0; i < n; i++) {
+      u = i / (n - 1); m = 1 - u;
+      out[i * 2] = m * m * ax + 2 * m * u * cx + u * u * bx;
+      out[i * 2 + 1] = m * m * ay + 2 * m * u * cy + u * u * by;
+    }
+    return out;
+  }
+
+  /* ---------- layout: clusters are packed by relaxation, then filled with organic blobs of nodes ---------- */
+  function buildGraph() {
+    var W = stage.clientWidth, narrow = W < 560, H = narrow ? 580 : 520;
+    stage.style.height = H + 'px';
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    PAL = readPal();
+    var R0 = rng(20251006), cx = W / 2, cy = H / 2, scale = narrow ? 0.85 : 1.7, CR = narrow ? 42 : 52, i, j, k, n;
+    var Ns = DOM.map(function (d) { return Math.round(d.N * scale); });
+    var sumN = Ns.reduce(function (a, b) { return a + b; }, 0), area = (narrow ? 0.40 : 0.44) * W * H;
+    var cl = DOM.map(function (d, q) { return { d: d, i: q, N: Ns[q], R: Math.sqrt(area * Ns[q] / sumN / Math.PI), rgb: PAL.dark ? d.c : d.l, x: 0, y: 0 }; });
+    var rx = narrow ? W * 0.30 : W * 0.34, ry = narrow ? H * 0.34 : H * 0.31, top = narrow ? 56 : 52;
+    cl.forEach(function (c, q) {
+      var a = (-120 + 36 * q + (R0() - 0.5) * 10) * Math.PI / 180;
+      c.hx = cx + rx * Math.cos(a); c.hy = cy + ry * Math.sin(a); c.x = c.hx; c.y = c.hy;
+    });
+    for (var it = 0; it < 420; it++) {
+      for (i = 0; i < 10; i++) {
+        var a = cl[i];
+        for (j = i + 1; j < 10; j++) {
+          var b = cl[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, mn = (a.R + b.R) * 0.8;
+          if (d < mn) { var kk = (mn - d) / 2 / d; a.x -= dx * kk; a.y -= dy * kk; b.x += dx * kk; b.y += dy * kk; }
+        }
+        var ex = a.x - cx, ey = a.y - cy, ed = Math.hypot(ex, ey) || 0.01, emn = a.R * 0.8 + CR + 22;
+        if (ed < emn) { a.x = cx + ex / ed * emn; a.y = cy + ey / ed * emn; }
+        a.x += (a.hx - a.x) * 0.015; a.y += (a.hy - a.y) * 0.015;
+        var m = a.R * 0.78; a.x = clamp(a.x, m + 6, W - m - 6); a.y = clamp(a.y, top + m * 0.7, H - m * 0.7 - 10);
+      }
+    }
+    function gauss() { return Math.sqrt(-2 * Math.log(R0() + 1e-9)) * Math.cos(TAU * R0()); }
+    var maxD = Math.hypot(W, H) / 2;
+
+    cl.forEach(function (c) {
+      var N = c.N, f1 = R0() * TAU, f2 = R0() * TAU, f3 = R0() * TAU, ax = 0.86 + R0() * 0.3, ay = 0.86 + R0() * 0.3, subs = [];
+      for (k = 0; k < 4; k++) subs.push({ a: R0() * TAU, r: R0() * 0.6, s: 0.28 + R0() * 0.14 });
+      c.X = new Float32Array(N); c.Y = new Float32Array(N); c.S = new Float32Array(N); c.D = new Float32Array(N);
+      c.P = new Float32Array(N); c.O = new Float32Array(N); c.GD = new Float32Array(N);
+      for (n = 0; n < N; n++) {
+        var x, y;
+        if (R0() < 0.62) {
+          var an = R0() * TAU, rr = Math.pow(R0(), 0.55), sh = 1 + 0.22 * Math.sin(2 * an + f1) + 0.14 * Math.sin(3 * an + f2) + 0.08 * Math.sin(5 * an + f3);
+          x = Math.cos(an) * c.R * rr * sh * ax; y = Math.sin(an) * c.R * rr * sh * ay;
+        } else {
+          var sb = subs[n % 4];
+          x = Math.cos(sb.a) * sb.r * c.R * ax + gauss() * sb.s * c.R * 0.6; y = Math.sin(sb.a) * sb.r * c.R * ay + gauss() * sb.s * c.R * 0.6;
+        }
+        var dd = Math.min(1.15, Math.hypot(x / ax, y / ay) / c.R);
+        c.X[n] = c.x + x; c.Y[n] = c.y + y; c.D[n] = dd; c.P[n] = R0(); c.O[n] = R0() * 0.14;
+        c.S[n] = (0.8 + Math.pow(R0(), 2.8) * 4.0) * (1.3 - 0.55 * Math.min(1, dd)) * (narrow ? 0.8 : 1);
+        c.GD[n] = Math.hypot(c.X[n] - cx, c.Y[n] - cy) / maxD;
+      }
+      /* intra-cluster web: each node reaches for its nearest neighbours; the larger nodes also tie back to the hub */
+      var edges = [], seen = {}, maxd = c.R * 0.3, a, b, cand, q;
+      for (a = 0; a < N; a++) {
+        cand = [];
+        for (b = 0; b < N; b++) if (b !== a) { var ddx = c.X[a] - c.X[b], ddy = c.Y[a] - c.Y[b], d2 = ddx * ddx + ddy * ddy; if (d2 < maxd * maxd) cand.push([d2, b]); }
+        cand.sort(function (u, v) { return u[0] - v[0]; });
+        for (q = 0; q < Math.min(2, cand.length); q++) {
+          b = cand[q][1]; var key = a < b ? a * 1000 + b : b * 1000 + a;
+          if (!seen[key]) { seen[key] = 1; edges.push(c.X[a], c.Y[a], c.X[b], c.Y[b], Math.max(c.D[a], c.D[b])); }
+        }
+        if (c.S[a] > 2.5 && R0() < 0.7) edges.push(c.X[a], c.Y[a], c.x, c.y, c.D[a]);
+      }
+      c.E = new Float32Array(edges); c.nE = edges.length / 5;
+      /* feeder threads: outer nodes reach in towards the incident */
+      var order = []; for (n = 0; n < N; n++) order.push(n);
+      order.sort(function (u, v) { return c.D[v] - c.D[u]; });
+      var K = narrow ? 12 : 22, pool = order.slice(0, Math.max(K, Math.round(N * 0.55)));
+      c.F = [];
+      for (k = 0; k < K; k++) {
+        var pick = pool.splice(Math.floor(R0() * pool.length), 1)[0], px = c.X[pick], py = c.Y[pick], dx = cx - px, dy = cy - py, ln = Math.hypot(dx, dy) || 1, off = (R0() - 0.5) * 0.55 * ln;
+        c.F.push(curve(px, py, (px + cx) / 2 + (-dy / ln) * off, (py + cy) / 2 + (dx / ln) * off, cx, cy, 14));
+      }
+      /* the hub's own spoke (carries the pulses) */
+      var hx = cx - c.x, hy = cy - c.y, hl = Math.hypot(hx, hy) || 1, ho = (c.i % 2 ? 1 : -1) * 0.14 * hl;
+      c.H = curve(c.x, c.y, (c.x + cx) / 2 + (-hy / hl) * ho, (c.y + cy) / 2 + (hx / hl) * ho, cx, cy, 28);
+      c.spr = sprite(c.rgb, false);
+    });
+
+    /* cross-link bundles */
+    var bundles = XL.map(function (pr) {
+      var A = cl[pr[0]], B = cl[pr[1]], th = [], T = narrow ? 9 : 16;
+      for (k = 0; k < T; k++) {
+        var na = Math.floor(R0() * A.N), nb = Math.floor(R0() * B.N), ax0 = A.X[na], ay0 = A.Y[na], bx0 = B.X[nb], by0 = B.Y[nb];
+        var mx = (ax0 + bx0) / 2, my = (ay0 + by0) / 2, qx = mx * 0.6 + cx * 0.4 + (R0() - 0.5) * 26, qy = my * 0.6 + cy * 0.4 + (R0() - 0.5) * 26;
+        th.push(curve(ax0, ay0, qx, qy, bx0, by0, 16));
+      }
+      return { a: pr[0], b: pr[1], th: th };
+    });
+
+    /* backdrop: hexagon grid, drifting dust, vignette (drawn once) */
+    var bg = document.createElement('canvas'); bg.width = Math.round(W * dpr); bg.height = Math.round(H * dpr);
+    var bx = bg.getContext('2d'); bx.scale(dpr, dpr);
+    var hs = 24, hh = hs * Math.sqrt(3), r, q2;
+    bx.strokeStyle = PAL.hex; bx.lineWidth = 1; bx.beginPath();
+    for (q2 = -1; q2 < W / (hs * 1.5) + 2; q2++) for (r = -1; r < H / hh + 2; r++) {
+      var hxx = q2 * hs * 1.5, hyy = r * hh + (q2 % 2 ? hh / 2 : 0);
+      for (var s = 0; s < 6; s++) { var an2 = Math.PI / 3 * s, px2 = hxx + hs * Math.cos(an2), py2 = hyy + hs * Math.sin(an2); if (s) bx.lineTo(px2, py2); else bx.moveTo(px2, py2); }
+      bx.closePath();
+    }
+    bx.stroke();
+    bx.globalCompositeOperation = 'destination-in';
+    var mk = bx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.62); mk.addColorStop(0, 'rgba(0,0,0,1)'); mk.addColorStop(1, 'rgba(0,0,0,0)');
+    bx.fillStyle = mk; bx.fillRect(0, 0, W, H);
+    bx.globalCompositeOperation = 'source-over';
+    for (k = 0; k < 140; k++) { bx.fillStyle = 'rgba(' + PAL.dust + ',' + (0.06 + R0() * 0.12).toFixed(2) + ')'; bx.beginPath(); bx.arc(R0() * W, R0() * H, 0.4 + R0() * 0.9, 0, TAU); bx.fill(); }
+    if (PAL.dark) { var vg = bx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); bx.fillStyle = vg; bx.fillRect(0, 0, W, H); }
+
+    G = { W: W, H: H, cx: cx, cy: cy, CR: CR, narrow: narrow, cl: cl, bundles: bundles, bg: bg,
+          S: { open: 0, ready: 0, rip: 0 }, CL: cl.map(function () { return { lit: 0, q: 0, f: 0, rg: 0 }; }) };
+    var cw = $('ctrw'); cw.style.left = cx + 'px'; cw.style.top = cy + 'px';
+  }
+
+  /* ---------- drawing: a pure function of the state objects, so scrubbing is always exact ---------- */
+  function trace(p, from, to) {                       // append a sampled polyline segment [from..to] to the current path
+    g2.moveTo(p[from * 2], p[from * 2 + 1]);
+    for (var i = from + 1; i <= to; i++) g2.lineTo(p[i * 2], p[i * 2 + 1]);
+  }
+  function rad(s) { return Math.max(0.95, s * 0.55); }
+  function bbox(c) {
+    if (c.bb) return c.bb;
+    var i, pad = 0, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (i = 0; i < c.N; i++) { pad = Math.max(pad, c.S[i] * 2.2); x0 = Math.min(x0, c.X[i]); x1 = Math.max(x1, c.X[i]); y0 = Math.min(y0, c.Y[i]); y1 = Math.max(y1, c.Y[i]); }
+    x0 = Math.floor(x0 - pad - 2); y0 = Math.floor(y0 - pad - 2);
+    return (c.bb = { x: x0, y: y0, w: Math.ceil(x1 - x0 + pad + 2), h: Math.ceil(y1 - y0 + pad + 2) });
+  }
+  function layer(c, lit) {                             // a cluster at rest: dormant (grey) or fully lit (colour); painted once, reused every frame
+    var b = bbox(c), i, cvs = document.createElement('canvas');
+    cvs.width = Math.round(b.w * dpr); cvs.height = Math.round(b.h * dpr);
+    var x = cvs.getContext('2d'); x.scale(dpr, dpr); x.translate(-b.x, -b.y);
+    x.lineWidth = 0.7; x.strokeStyle = lit ? rgba(c.rgb, PAL.edgeL) : PAL.edgeD; x.beginPath();
+    for (i = 0; i < c.nE; i++) { x.moveTo(c.E[i * 5], c.E[i * 5 + 1]); x.lineTo(c.E[i * 5 + 2], c.E[i * 5 + 3]); }
+    x.stroke();
+    if (lit) {
+      x.globalCompositeOperation = PAL.halo; x.globalAlpha = PAL.haloA;
+      for (i = 0; i < c.N; i++) { var sz = c.S[i] * 3.6 + 2; x.drawImage(c.spr, c.X[i] - sz / 2, c.Y[i] - sz / 2, sz, sz); }
+      x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+      x.fillStyle = rgba(c.rgb, 0.96); x.beginPath();
+      for (i = 0; i < c.N; i++) { var r = rad(c.S[i]); x.moveTo(c.X[i] + r, c.Y[i]); x.arc(c.X[i], c.Y[i], r, 0, TAU); }
+      x.fill();
+      x.fillStyle = rgba(c.rgb, 0.1); x.lineWidth = 1; x.strokeStyle = rgba(c.rgb, 0.85);
+      for (i = 0; i < c.N; i++) if (c.S[i] >= 2.4) { x.beginPath(); x.arc(c.X[i], c.Y[i], c.S[i] * 1.1, 0, TAU); x.fill(); x.stroke(); }
+      if (PAL.dark) { x.fillStyle = 'rgba(255,255,255,0.9)'; x.beginPath(); for (i = 0; i < c.N; i++) if (c.S[i] >= 1.3) { x.moveTo(c.X[i] + c.S[i] * 0.25, c.Y[i]); x.arc(c.X[i], c.Y[i], c.S[i] * 0.25, 0, TAU); } x.fill(); }
+    } else {
+      x.fillStyle = 'rgba(' + PAL.grey + ',' + PAL.greyA + ')'; x.beginPath();
+      for (i = 0; i < c.N; i++) { var r2 = rad(c.S[i]) * 0.9; x.moveTo(c.X[i] + r2, c.Y[i]); x.arc(c.X[i], c.Y[i], r2, 0, TAU); }
+      x.fill();
+    }
+    return { cv: cvs, x: b.x, y: b.y, w: b.w, h: b.h };
+  }
+  function warm(c) { if (!c.lc) c.lc = layer(c, true); if (!c.dc) c.dc = layer(c, false); }
+
+  function draw() {
+    if (!G) return;
+    var S = G.S, CL = G.CL, W = G.W, H = G.H, cx = G.cx, cy = G.cy, CR = G.CR, i, n, k, c, st, e;
+    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g2.globalCompositeOperation = 'source-over'; g2.globalAlpha = 1;
+    g2.fillStyle = PAL.bg; g2.fillRect(0, 0, W, H);
+    g2.globalAlpha = clamp(S.open * 1.5, 0, 1); g2.drawImage(G.bg, 0, 0, W, H); g2.globalAlpha = 1;
+    var open = S.open, ready = S.ready, anyF = 0, done10 = 0, arc = 0, vis0 = clamp(open * 1.5 - 0.2, 0, 1), maxD = Math.hypot(W, H) / 2;
+    for (i = 0; i < 10; i++) { anyF = Math.max(anyF, CL[i].f); arc += clamp((CL[i].q - 0.75) / 0.25, 0, 1); if (CL[i].q >= 0.9) done10++; }
+    arc /= 10;
+    if (done10 !== lastCnt) { lastCnt = done10; $('gcnt').textContent = done10 + ' / 10'; }
+    var TH = PAL.thread;
+
+    /* cross-link bundles settle between related domains */
+    if (ready > 0) {
+      g2.lineWidth = 0.8;
+      G.bundles.forEach(function (bd) {
+        var A = G.cl[bd.a].rgb, B = G.cl[bd.b].rgb, T = bd.th.length, half;
+        for (half = 0; half < 2; half++) {
+          g2.strokeStyle = rgba(half ? B : A, 0.16 * ready * TH); g2.beginPath();
+          for (k = 0; k < T; k++) {
+            var cnt = Math.floor(clamp(ready * 1.3 - k / T * 0.3, 0, 1) * 15);
+            if (cnt < 1) continue;
+            if (!half) trace(bd.th[k], 0, Math.min(7, cnt)); else if (cnt > 8) trace(bd.th[k], 8, cnt);
+          }
+          g2.stroke();
+        }
+      });
+    }
+
+    for (i = 0; i < 10; i++) {
+      c = G.cl[i]; st = CL[i];
+      var m = 1 - 0.38 * anyF * (1 - st.f), lit = st.lit, N = c.N;
+
+      /* spoke to the incident, and the feeder threads that stream into it */
+      g2.lineWidth = 1; g2.strokeStyle = PAL.spoke; g2.globalAlpha = vis0; g2.beginPath(); trace(c.H, 0, 27); g2.stroke(); g2.globalAlpha = 1;
+      if (st.q > 0) {
+        g2.strokeStyle = rgba(c.rgb, 0.5 * m); g2.lineWidth = 1.2; g2.beginPath(); trace(c.H, 0, Math.floor(clamp(st.q, 0, 1) * 27)); g2.stroke();
+        var K = c.F.length; g2.lineWidth = 0.7; g2.strokeStyle = rgba(c.rgb, clamp(((st.q >= 1 ? 0.15 : 0.24 + 0.1 * st.f) * m + 0.12 * st.f) * TH, 0, 1)); g2.beginPath();
+        for (k = 0; k < K; k++) { var fk = clamp(st.q * 1.7 - 0.7 * k / K, 0, 1); if (fk > 0) trace(c.F[k], 0, 1 + Math.floor(fk * 12)); }
+        g2.stroke();
+        if (st.q < 1) {
+          g2.fillStyle = rgba(c.rgb, 1);
+          for (k = 0; k < K; k++) {
+            var f2 = clamp(st.q * 1.7 - 0.7 * k / K, 0, 1);
+            if (f2 > 0 && f2 < 1) { var ix = 1 + Math.floor(f2 * 12); g2.beginPath(); g2.arc(c.F[k][ix * 2], c.F[k][ix * 2 + 1], 2.1, 0, TAU); g2.fill(); }
+          }
+        }
+      }
+
+      /* colour wash behind a lit or focused cluster */
+      if (lit > 0 || st.f > 0) {
+        g2.globalCompositeOperation = PAL.halo; g2.globalAlpha = clamp(PAL.glowA * lit * m + PAL.glowF * st.f, 0, 1);
+        g2.drawImage(c.spr, c.x - c.R * 1.6, c.y - c.R * 1.6, c.R * 3.2, c.R * 3.2);
+        g2.globalAlpha = 1; g2.globalCompositeOperation = 'source-over';
+      }
+
+      /* the cluster itself */
+      if (lit >= 1 && open >= 1) {
+        warm(c); var L = c.lc;
+        g2.globalAlpha = m; g2.drawImage(L.cv, L.x, L.y, L.w, L.h);
+        if (st.f > 0) { g2.globalAlpha = 0.5 * st.f; g2.drawImage(L.cv, L.x, L.y, L.w, L.h); }
+        g2.globalAlpha = 1;
+      } else {
+        warm(c); var D = c.dc;
+        if (open < 1) { g2.save(); g2.beginPath(); g2.arc(cx, cy, open * maxD * 1.15, 0, TAU); g2.clip(); }
+        g2.globalAlpha = m; g2.drawImage(D.cv, D.x, D.y, D.w, D.h); g2.globalAlpha = 1;
+        if (open < 1) g2.restore();
+        if (lit > 0) {
+          var thr = lit * 1.35 - 0.05, E = c.E, nE = c.nE;
+          g2.lineWidth = 0.7; g2.strokeStyle = rgba(c.rgb, (PAL.edgeL + 0.1 * st.f) * m * vis0); g2.beginPath();
+          for (e = 0; e < nE; e++) if (E[e * 5 + 4] <= thr) { g2.moveTo(E[e * 5], E[e * 5 + 1]); g2.lineTo(E[e * 5 + 2], E[e * 5 + 3]); }
+          g2.stroke();
+          var X = c.X, Y = c.Y, SZ = c.S, DD = c.D, GD = c.GD, OO = c.O, ln, vis, sz;
+          g2.globalCompositeOperation = PAL.halo;
+          for (n = 0; n < N; n++) {
+            ln = clamp((lit * 1.35 - DD[n] - OO[n]) * 3.2, 0, 1); if (ln <= 0) continue;
+            vis = clamp((open * 1.6 - GD[n]) * 5, 0, 1); if (vis <= 0) continue;
+            sz = SZ[n] * 3.6 + 2; g2.globalAlpha = ln * vis * m * PAL.haloA;
+            g2.drawImage(c.spr, X[n] - sz / 2, Y[n] - sz / 2, sz, sz);
+          }
+          g2.globalCompositeOperation = 'source-over'; g2.fillStyle = rgba(c.rgb, 1); g2.lineWidth = 1; g2.strokeStyle = rgba(c.rgb, 1);
+          for (n = 0; n < N; n++) {
+            ln = clamp((lit * 1.35 - DD[n] - OO[n]) * 3.2, 0, 1); if (ln <= 0) continue;
+            vis = clamp((open * 1.6 - GD[n]) * 5, 0, 1); if (vis <= 0) continue;
+            var r = rad(SZ[n]);
+            g2.globalAlpha = 0.96 * ln * vis * m; g2.beginPath(); g2.arc(X[n], Y[n], r, 0, TAU); g2.fill();
+            if (SZ[n] >= 2.4 && ln > 0.3) { g2.globalAlpha = 0.85 * ln * vis * m; g2.beginPath(); g2.arc(X[n], Y[n], SZ[n] * 1.1, 0, TAU); g2.stroke(); }
+          }
+          g2.globalAlpha = 1;
+        }
+      }
+
+      /* focus ring while a plan step draws on this domain */
+      if (st.f > 0) {
+        g2.setLineDash([3, 5]); g2.lineWidth = 1; g2.strokeStyle = rgba(c.rgb, 0.75 * st.f);
+        g2.beginPath(); g2.arc(c.x, c.y, c.R * (1.05 + 0.05 * st.f), 0, TAU); g2.stroke(); g2.setLineDash([]);
+      }
+
+      /* pulse carrying this domain's facts along its spoke into the incident */
+      if (st.q > 0.02 && st.q < 0.98) {
+        var u = st.q * st.q * (3 - 2 * st.q);
+        for (k = 0; k < 3; k++) {
+          var uu = Math.max(0, u - k * 0.05), fi = uu * 27, i0 = Math.floor(fi), i1 = Math.min(27, i0 + 1), fr = fi - i0;
+          var px = c.H[i0 * 2] + (c.H[i1 * 2] - c.H[i0 * 2]) * fr, py = c.H[i0 * 2 + 1] + (c.H[i1 * 2 + 1] - c.H[i0 * 2 + 1]) * fr, ps = [22, 15, 10][k];
+          g2.globalCompositeOperation = PAL.halo; g2.globalAlpha = [0.9, 0.55, 0.3][k]; g2.drawImage(c.spr, px - ps / 2, py - ps / 2, ps, ps);
+          g2.globalCompositeOperation = 'source-over'; g2.globalAlpha = [1, 0.7, 0.45][k]; g2.fillStyle = rgba(c.rgb, 1);
+          g2.beginPath(); g2.arc(px, py, [3.2, 2.4, 1.6][k], 0, TAU); g2.fill();
+        }
+        g2.globalAlpha = 1;
+      }
+    }
+
+    /* the incident at the centre */
+    var col = mix(ORANGE, GREEN, ready), cr = CR * clamp(open * 2.2, 0, 1) * (open < 1 ? 1 + 0.06 * Math.sin(open * Math.PI) : 1);
+    if (cr > 0) {
+      var hg = g2.createRadialGradient(cx, cy, cr * 0.6, cx, cy, cr * 2.8);
+      hg.addColorStop(0, rgba(col, (PAL.dark ? 0.30 : 0.2) + 0.12 * arc)); hg.addColorStop(1, rgba(col, 0));
+      g2.fillStyle = hg; g2.globalCompositeOperation = PAL.halo; g2.beginPath(); g2.arc(cx, cy, cr * 2.8, 0, TAU); g2.fill(); g2.globalCompositeOperation = 'source-over';
+      g2.lineWidth = 1.2;
+      for (i = 0; i < 10; i++) if (CL[i].rg > 0 && CL[i].rg < 1) { g2.strokeStyle = rgba(G.cl[i].rgb, 0.6 * (1 - CL[i].rg)); g2.beginPath(); g2.arc(cx, cy, CR + CL[i].rg * 40, 0, TAU); g2.stroke(); }
+      if (S.rip > 0 && S.rip < 1) { g2.lineWidth = 1.4; g2.strokeStyle = rgba(col, 0.5 * (1 - S.rip)); g2.beginPath(); g2.arc(cx, cy, CR + S.rip * Math.max(W, H) * 0.6, 0, TAU); g2.stroke(); }
+      g2.fillStyle = PAL.ctrFill; g2.beginPath(); g2.arc(cx, cy, cr, 0, TAU); g2.fill();
+      g2.lineWidth = 1.8; g2.strokeStyle = rgba(col, 1); g2.stroke();
+      g2.lineWidth = 1; g2.strokeStyle = PAL.track; g2.beginPath(); g2.arc(cx, cy, Math.max(0, cr - 8), 0, TAU); g2.stroke();
+      g2.lineWidth = 2.5; g2.beginPath(); g2.arc(cx, cy, cr + 8, 0, TAU); g2.stroke();
+      if (arc > 0) { g2.lineCap = 'round'; g2.strokeStyle = rgba(col, 1); g2.beginPath(); g2.arc(cx, cy, cr + 8, -Math.PI / 2, -Math.PI / 2 + TAU * arc); g2.stroke(); g2.lineCap = 'butt'; }
+    }
+
+    /* hubs and labels sit on top */
+    g2.textAlign = 'center'; g2.textBaseline = 'alphabetic'; g2.lineJoin = 'round';
+    var fs = G.narrow ? 9.5 : 11, LB = PAL.lbl;
+    for (i = 0; i < 10; i++) {
+      c = G.cl[i]; st = CL[i]; var la = clamp(vis0 * (0.45 + 0.55 * st.lit), 0, 1), mm = 1 - 0.38 * anyF * (1 - st.f);
+      if (vis0 <= 0) continue;
+      g2.globalAlpha = la * mm;
+      g2.fillStyle = rgba(st.lit > 0 ? c.rgb : [150, 140, 128], 0.25 + 0.75 * st.lit); g2.beginPath(); g2.arc(c.x, c.y, 4.6, 0, TAU); g2.fill();
+      g2.lineWidth = 1.3; g2.strokeStyle = rgba(PAL.hubRing, 0.35 + 0.5 * st.lit); g2.beginPath(); g2.arc(c.x, c.y, 7.2, 0, TAU); g2.stroke();
+      g2.font = '600 ' + fs + 'px Archivo, system-ui, sans-serif';
+      if ('letterSpacing' in g2) g2.letterSpacing = '1.3px';
+      g2.lineWidth = 3.6; g2.strokeStyle = PAL.lblStroke; g2.strokeText(c.d.n.toUpperCase(), c.x, c.y + 21);
+      g2.fillStyle = rgba(LB, 0.6 + 0.4 * st.lit); g2.fillText(c.d.n.toUpperCase(), c.x, c.y + 21);
+      if (st.lit > 0) {
+        g2.font = '500 ' + (fs - 1) + 'px Archivo, system-ui, sans-serif'; if ('letterSpacing' in g2) g2.letterSpacing = '0.2px';
+        g2.globalAlpha = la * mm * clamp(st.lit * 1.5 - 0.4, 0, 1);
+        g2.lineWidth = 3.2; g2.strokeStyle = PAL.lblStroke; g2.strokeText(c.d.s, c.x, c.y + 21 + fs + 3);
+        g2.fillStyle = rgba(PAL.dark ? mix(c.rgb, [255, 255, 255], 0.55) : mix(c.rgb, [42, 37, 31], 0.4), 1); g2.fillText(c.d.s, c.x, c.y + 21 + fs + 3);
+      }
+    }
+    g2.globalAlpha = 1; if ('letterSpacing' in g2) g2.letterSpacing = '0px';
+  }
+
+  /* typed plan titles: a hidden ghost reserves the final size */
+  kids($('steps')).forEach(function (li) {
+    var tt = li.querySelector('.tt'), full = tt.getAttribute('data-full');
+    tt.innerHTML = '<span class="g"></span><span></span>'; tt.firstChild.textContent = full;
+  });
+  var rows = kids($('steps')), reveals = [$('rvPlan')];
+
+  var err = $('err');
+  if (!window.gsap) {
+    err.hidden = false; buildGraph();
+    G.S.open = 1; G.S.ready = 1; G.CL.forEach(function (s) { s.lit = 1; s.q = 1; });
+    reveals.forEach(function (e) { e.style.height = 'auto'; e.style.opacity = 1; e.style.visibility = 'visible'; });
+    $('wsBody').style.setProperty('--g', 1);
+    $('stA').style.visibility = 'hidden'; $('stB').style.opacity = 1; $('stB').style.visibility = 'visible';
+    $('grA').style.visibility = 'hidden'; $('grB').style.opacity = 1; $('grB').style.visibility = 'visible';
+    rows.forEach(function (li) {
+      li.querySelector('.tt').lastChild.textContent = li.querySelector('.tt').getAttribute('data-full');
+      ['.no b', '.sb2', '.d2'].forEach(function (q) { var e = li.querySelector(q); e.style.opacity = 1; e.style.visibility = 'visible'; });
+      li.querySelector('.no circle').style.strokeDashoffset = 0; li.querySelector('.d2 svg').style.strokeDashoffset = 0;
+      var sp = li.querySelector('.sp'); if (sp) sp.style.transform = 'scaleY(1)';
+    });
+    draw();
+    return;
+  }
+
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var scrub = $('scrub'), readout = $('readout'), pauseBtn = $('pause'), slowBtn = $('slow'), replayBtn = $('replay');
+  var beatEls = kids($('beats'));
+  var BEATS = beatEls.map(function (el) { return parseFloat(el.getAttribute('data-t')); });
+  var ctx = null, loopTimer = null, started = false, follow = true;
+
+  function follow_(el) {
+    if (!follow) return;
+    var r = el.getBoundingClientRect(), over = r.bottom - (window.innerHeight - 24);
+    if (over > 0) window.scrollBy(0, over);
+  }
+  function reveal(t, el, at, dur) {
+    t.fromTo(el, { height: 0, autoAlpha: 0 }, { height: 'auto', autoAlpha: 1, duration: dur, ease: 'power3.out', onUpdate: function () { follow_(el); } }, at);
+  }
+  function swap(t, a, b, at) {
+    t.fromTo(a, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.15, immediateRender: false }, at);
+    t.fromTo(b, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15, immediateRender: false }, at + 0.05);
+  }
+  function typeTo(t, el, at, dur) {
+    var full = el.getAttribute('data-full'), o = { n: 0 };
+    t.fromTo(o, { n: 0 }, { n: full.length, duration: dur, ease: 'none', immediateRender: false, onUpdate: function () { el.lastChild.textContent = full.slice(0, Math.round(o.n)); } }, at);
+  }
+
+  function build() {
+    if (ctx) ctx.revert();
+    buildGraph(); lastCnt = -1;
+    rows.forEach(function (li) { li.querySelector('.tt').lastChild.textContent = ''; });
+    $('gcnt').textContent = '0 / 10';
+    var g0 = G; G.cl.forEach(function (cc, i) { setTimeout(function () { if (G === g0) warm(cc); }, 40 + 60 * i); });   // warm the cluster layers before they are needed
+
+    ctx = gsap.context(function () {
+      var t = gsap.timeline({ paused: true, defaults: { ease: 'power2.out' }, onUpdate: function () { sync(); draw(); }, onComplete: done });
+      var S = G.S, CL = G.CL;
+
+      /* 0.0  OPEN: the incident appears; the dormant brain blooms outward from it */
+      t.fromTo(S, { open: 0 }, { open: 1, duration: 1.0, ease: 'power2.out' }, 0);
+      t.fromTo($('ctr'), { autoAlpha: 0, scale: 0.92 }, { autoAlpha: 1, scale: 1, duration: 0.5 }, 0.35);
+
+      /* 0.9  LINK: each domain ignites from its hub outward, its threads stream into the incident */
+      CL.forEach(function (s, i) {
+        var Ti = 0.9 + 0.55 * i;
+        t.fromTo(s, { lit: 0 }, { lit: 1, duration: 1.0, ease: 'power1.out' }, Ti);
+        t.fromTo(s, { q: 0 }, { q: 1, duration: 0.95, ease: 'none', immediateRender: false }, Ti + 0.1);
+        t.fromTo(s, { rg: 0 }, { rg: 1, duration: 0.75, ease: 'power2.out', immediateRender: false }, Ti + 0.95);
+      });
+
+      /* 2.6  DRAFT: the plan opens; each step is written while the domains it draws on light up */
+      reveal(t, $('rvPlan'), 2.6, 0.5);
+      t.fromTo($('pLbl'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, 2.9);
+      t.fromTo($('pTtl'), { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.4 }, 3.0);
+      [3.5, 5.1, 6.7].forEach(function (St, j) {
+        var li = rows[j];
+        t.fromTo(li.querySelector('.no circle'), { strokeDashoffset: 69.2 }, { strokeDashoffset: 0, duration: 0.4 }, St);
+        t.fromTo(li.querySelector('.no b'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, St + 0.15);
+        typeTo(t, li.querySelector('.tt'), St + 0.15, 0.9);
+        t.fromTo(li.querySelector('.sb2'), { autoAlpha: 0, y: 4 }, { autoAlpha: 1, y: 0, duration: 0.4 }, St + 0.8);
+        t.fromTo(li.querySelector('.d1'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, St + 0.1);
+        t.to(li.querySelectorAll('.d1 i'), { y: -2.5, duration: 0.18, stagger: 0.07, repeat: 3, yoyo: true, ease: 'sine.inOut' }, St + 0.15);
+        t.fromTo(li.querySelector('.d1'), { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.15, immediateRender: false }, St + 1.15);
+        t.fromTo(li.querySelector('.d2'), { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, immediateRender: false }, St + 1.2);
+        t.fromTo(li.querySelector('.d2 svg'), { strokeDashoffset: 16 }, { strokeDashoffset: 0, duration: 0.3 }, St + 1.25);
+        var sp = li.querySelector('.sp');
+        if (sp) t.fromTo(sp, { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: 'power1.inOut' }, St + 1.2);
+        FOCUS[j].forEach(function (k) {
+          t.to(CL[k], { keyframes: { f: [0, 1, 1, 0], easeEach: 'none' }, duration: 1.5 }, St + 0.1);
+        });
+      });
+
+      /* 8.0  READY: a ripple leaves the centre, cross-link bundles settle, the incident turns green */
+      t.fromTo(S, { ready: 0 }, { ready: 1, duration: 1.0, ease: 'power1.inOut' }, 8.0);
+      t.fromTo(S, { rip: 0 }, { rip: 1, duration: 1.2, ease: 'power2.out' }, 8.0);
+      t.fromTo($('wsBody'), { '--g': 0 }, { '--g': 1, duration: 0.5 }, 8.3);
+      swap(t, $('stA'), $('stB'), 8.3);
+      swap(t, $('grA'), $('grB'), 8.3);
+      t.call(function () {}, null, 9.6);
+
+      tl = t;
+    }, $('wsBody'));
+    draw();
+  }
+
+  /* ---------- controls ---------- */
+  function sync() {
+    if (!tl) return;
+    var time = tl.time(), dur = tl.duration(), idx = -1;
+    readout.textContent = time.toFixed(1) + ' / ' + dur.toFixed(1) + ' s';
+    scrub.value = Math.round(time / dur * 1000);
+    for (var i = 0; i < BEATS.length; i++) if (time >= BEATS[i]) idx = i;
+    beatEls.forEach(function (el, i) { el.classList.toggle('on', i === idx); el.classList.toggle('done', i < idx); });
+  }
+  function ui() { pauseBtn.textContent = (!tl || tl.paused()) ? 'Play' : 'Pause'; }
+  function toTop() { window.scrollTo(0, 0); }
+  function done() {
+    clearTimeout(loopTimer);
+    if (reduce) { ui(); return; }
+    loopTimer = setTimeout(function () { if (tl && !tl.paused() && tl.progress() === 1) { toTop(); tl.restart(); } }, 3000);
+  }
+  replayBtn.addEventListener('click', function () { clearTimeout(loopTimer); toTop(); tl.restart(); ui(); });
+  pauseBtn.addEventListener('click', function () {
+    clearTimeout(loopTimer);
+    if (tl.paused()) { if (tl.progress() === 1) { toTop(); tl.restart(); } else tl.play(); } else { tl.pause(); }
+    ui();
+  });
+  slowBtn.addEventListener('click', function () {
+    var on = slowBtn.getAttribute('aria-pressed') !== 'true';
+    slowBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    tl.timeScale(on ? 0.35 : 1);
+  });
+  scrub.addEventListener('input', function () {
+    clearTimeout(loopTimer); tl.pause(); tl.time(tl.duration() * scrub.value / 1000, false); ui();
+  });
+
+  var rT, lastW = 0, lastDark = null;
+  function rebuildKeep() {
+    var p = tl.progress(), wasPaused = tl.paused(), ts = tl.timeScale();
+    build(); lastW = stage.clientWidth; lastDark = isDark(); tl.timeScale(ts); tl.progress(p, false);
+    if (wasPaused || p >= 1) tl.pause(); else tl.play();
+    ui();
+  }
+  function isDark() { return readPal().dark; }
+  function themeChanged() {
+    if (!started) return;
+    clearTimeout(rT);
+    rT = setTimeout(function () { if (isDark() !== lastDark) rebuildKeep(); }, 80);
+  }
+  try { new MutationObserver(themeChanged).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] }); } catch (e) {}
+  try { var mq = matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', themeChanged); else if (mq.addListener) mq.addListener(themeChanged); } catch (e) {}
+  window.addEventListener('resize', function () {
+    if (!started) return;
+    clearTimeout(rT);
+    rT = setTimeout(function () {
+      if (stage.clientWidth === lastW) return;
+      rebuildKeep();
+    }, 220);
+  });
+
+  function init() {
+    if (started) return; started = true;
+    build(); lastW = stage.clientWidth; lastDark = isDark();
+    if (reduce) { follow = false; tl.progress(1, false); tl.pause(); }
+    else { tl.play(0); }
+    ui();
+  }
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontsReady, new Promise(function (r) { setTimeout(r, 1500); })]).then(init);
+})();
+</script>
+
+</body></html>
