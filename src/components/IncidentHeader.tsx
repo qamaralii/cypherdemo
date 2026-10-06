@@ -40,7 +40,7 @@ export function IncidentHeader({ theme = 'dark' }: { theme?: 'dark' | 'light' })
 
       {/* Reaction count */}
       <span className="incident-likes">
-        {socialPost.reaction === 'dislikes' ? <img src="/assets/dislike.svg" alt="Dislike" /> : '❤'} {new Intl.NumberFormat('en-US').format(socialPost.counters.likes)} {socialPost.reaction === 'dislikes' ? 'dislikes' : 'likes'}
+        {socialPost.reaction === 'dislikes' ? <img src={`${import.meta.env.BASE_URL}assets/dislike.svg`} alt="Dislike" /> : '❤'} {new Intl.NumberFormat('en-US').format(socialPost.counters.likes)} {socialPost.reaction === 'dislikes' ? 'dislikes' : 'likes'}
       </span>
 
       {/* Incident badge */}

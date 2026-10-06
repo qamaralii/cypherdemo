@@ -206,7 +206,7 @@ export const config = {
     agentPrompt: {
       headline: 'Want to see the other way?',
       body: 'See how Intugle agents would have handled this same incident.',
-      yes: 'Unleash the agents →',
+      yes: 'Unlock Intugle\'s Agentic Alpha →',
       no: 'I’ll take my chances',
     },
     customerUpdate: {
