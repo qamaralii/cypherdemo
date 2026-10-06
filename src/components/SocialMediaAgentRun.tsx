@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { config } from '../config';
+import { DislikeIcon } from './DislikeIcon';
 import './social-media-agent-run.css';
 
 const MESSAGE = 'Hi Sarah, we’re sorry about the YummChips product you found. We’d like to investigate and help.';
@@ -114,7 +115,7 @@ export function SocialMediaAgentRun({ progress }: { progress: number }) {
         <article className="sm-run-post" aria-label="Sarah’s Instagram complaint">
           <header><i className="sm-run-avatar">S<span className="sm-run-avatar-pulse" /><span className="sm-run-avatar-badge">✓</span></i><b>sarah_mitchell</b><time>09:00</time><span>•••</span></header>
           <img className="sm-run-photo" src={config.assets.socialPostImage} alt="Mouldy YummChips beside their packaging" />
-          <div className="sm-run-actions"><img src={`${import.meta.env.BASE_URL}assets/dislike.svg`} alt="Dislike" /><span>○</span><span>⌁</span><span>⌑</span></div>
+          <div className="sm-run-actions"><DislikeIcon /><span>○</span><span>⌁</span><span>⌑</span></div>
           <div className="sm-run-post-copy"><strong className="sm-run-reactions">0 dislikes</strong><p><b>sarah_mitchell</b> Just opened <mark className="sm-run-mention">@YummChips</mark>. How is this okay?</p><p><b>jake.rodriguez</b> <mark className="sm-run-mention">@YummChips</mark>, this is disgusting.</p><p><b>healthwatch_official</b> <mark className="sm-run-mention">@YummChips</mark>, has anyone contacted the manufacturer?</p><small>View all 847 comments</small><small>2 HOURS AGO</small></div>
         </article>
         <div className="sm-run-feed" aria-hidden="true"><div className="sm-run-feed-list">{FEED_HEIGHTS.map((height, i) => <div className="sm-run-skeleton" style={{ height }} key={i}><header><i /><span /></header><div /><span /></div>)}<div className="sm-run-feed-hit"><header><i>S</i><b>sarah_mitchell</b></header><p>Just opened <mark>@YummChips</mark>. How is this okay?</p><span className="sm-run-feed-badge">Tag detected</span></div>{[150, 96, 120].map((height, i) => <div className="sm-run-skeleton" style={{ height }} key={`after-${i}`}><header><i /><span /></header><div /></div>)}</div><div className="sm-run-reader"><span>Listening</span></div></div>
