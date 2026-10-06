@@ -3,6 +3,7 @@ import type { ChangeEvent, CSSProperties, ReactNode } from 'react';
 import { config } from '../config';
 import { InstagramPostCard } from './InstagramPostCard';
 import { BatchLabelScan } from './BatchLabelScan';
+import { SocialMediaAgentRun } from './SocialMediaAgentRun';
 
 export type WorkflowStage =
   | 'socialMedia'
@@ -87,6 +88,8 @@ export function WorkflowPanel(props: Props) {
   }, [stage, progress, paused, onAdvance]);
    const activeTaskIndex = stage === 'identification'
      ? visualProgress >= .8 ? 3 : visualProgress >= 5.7 / 12 ? 2 : visualProgress >= 3.75 / 12 ? 1 : 0
+     : stage === 'socialMedia'
+       ? visualProgress >= 15 / 19 ? 3 : visualProgress >= 9.2 * 15 / (12.4 * 19) ? 2 : visualProgress >= 4.6 * 15 / (12.4 * 19) ? 1 : 0
      : Math.min(2, Math.floor(progress * 3));
    const preparing = ['resolution', 'recall', 'comms', 'support'].includes(stage) && progress < 1;
    const controlsPaused = paused || preparing || Boolean(approvalFeedback);
@@ -144,7 +147,7 @@ export function WorkflowPanel(props: Props) {
             <div className="workflow-product-rail"><img src="/assets/intugle-logo.svg" alt="Intugle" /><span>AI</span></div>
             <div className="workflow-visual">
               <header><span>{visualLabel(stage)}</span><small>{stage === 'outcome' ? 'AUDIT TRAIL COMPLETE' : 'LIVE WORKSPACE'}</small></header>
-              {stage === 'socialMedia' && <SocialVisual progress={visualProgress} />}
+              {stage === 'socialMedia' && <SocialMediaAgentRun progress={visualProgress} />}
               {(stage === 'orchestrator' || stage === 'orchestratorApproval') && <OrchestratorVisual progress={visualProgress} ready={stage === 'orchestratorApproval'} onAdvance={() => props.onApproval('orchestratorApproval')} paused={paused || Boolean(approvalFeedback)} />}
               {stage === 'identification' && <BatchLabelScan progress={visualProgress} />}
               {stage === 'rca' && <RcaVisual progress={visualProgress} />}
@@ -187,10 +190,6 @@ function Reveal({ visible, children, className = '' }: { visible: boolean; child
   return <div className={`stage-reveal ${className}${visible ? ' visible' : ''}`} inert={!visible}>{children}</div>;
 }
 
-function Tick() {
-  return <i className="result-tick" aria-label="Complete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></i>;
-}
-
 function ApprovalFeedback({ stage, regions: selectedRegions, channels, compensation }: { stage: WorkflowStage; regions: Region[]; channels: string[]; compensation: 'Hamper' | 'Voucher' }) {
   if (stage === 'orchestratorApproval') return <div className="approval-feedback feedback-plan"><span>PLAN APPROVED</span><strong>Investigation brief released</strong><div className="feedback-plan-lines"><i /><i /><i /></div><p>Batch identification, root-cause analysis, and response planning are now authorised.</p></div>;
   if (stage === 'recall') {
@@ -200,40 +199,6 @@ function ApprovalFeedback({ stage, regions: selectedRegions, channels, compensat
   }
   if (stage === 'comms') return <div className="approval-feedback feedback-comms"><span>PUBLIC RESPONSE PUBLISHED</span><strong>{channels.length} selected channels updated</strong><div className="feedback-channel-row">{channels.map((channel) => <b key={channel}>{channel}</b>)}</div><p>The approved public statement is now distributing.</p></div>;
   return <div className="approval-feedback feedback-support"><span>CUSTOMER RESPONSE SENT</span><strong>Sarah&apos;s case has been updated</strong><div className="feedback-message"><b>To Sarah Mitchell</b><p>Personal response delivered · {compensation} confirmed</p></div><p>Customer care record linked to the incident.</p></div>;
-}
-
-function SocialVisual({ progress }: { progress: number }) {
-  const detected = progress >= 0.1;
-  const drafted = progress >= 4_500 / AUTO_STAGE_DURATIONS.socialMedia!;
-  const contacted = progress >= 10_000 / AUTO_STAGE_DURATIONS.socialMedia!;
-  const handedOff = progress >= 15_000 / AUTO_STAGE_DURATIONS.socialMedia!;
-  const agentState = handedOff
-    ? ['Ready to start the investigation', 'Sarah’s post, contact details, and product information are ready']
-    : contacted
-      ? ['Customer details verified', 'Preferred contact and consent recorded']
-      : drafted
-        ? ['Preparing customer outreach', 'Using Sarah’s name, product complaint, and brand context']
-        : detected
-          ? ['Brand mention identified', '@YummChips found in Sarah’s post and comments']
-          : ['Monitoring brand mentions', 'Checking Sarah’s post and comment mentions'];
-  return <div className="social-workspace social-story" data-detected={detected} data-phase={handedOff ? 'handoff' : contacted ? 'contact' : 'detect'}>
-    <div className="social-story-heading"><span>SOCIAL MEDIA AGENT</span><strong>{agentState[0]}</strong><div><small>Instagram · sarah_mitchell</small><em>{agentState[1]}</em></div></div>
-    <div className="social-workflow-body">
-      <article className={`social-post-source${progress >= 0.01 ? ' entered' : ''}`}>
-        <div className="social-post-source-head"><span>S</span><b>sarah_mitchell</b><small>09:00</small><i>•••</i></div>
-        <img src="/assets/social-post.png" alt="Sarah’s original complaint" />
-        <div className="social-post-actions"><img src="/assets/dislike.svg" alt="Dislike" /><span>○</span><span>⌁</span><span>⌑</span></div>
-        <strong className="social-post-reactions">61,200 dislikes</strong>
-        <div className="social-post-source-copy"><p><b>sarah_mitchell</b> Just opened <mark>@YummChips</mark>. How is this okay?</p><p><b>jake.rodriguez</b> <mark>@YummChips</mark>, this is disgusting.</p><p><b>healthwatch_official</b> <mark>@YummChips</mark>, has anyone contacted the manufacturer?</p></div>
-        <div className="social-post-footer"><span>View all 847 comments</span><small>2 hours ago</small></div>
-      </article>
-      <div className="social-agent-path">
-        <div className={`social-detection-result${detected ? ' visible' : ''}`}>{detected && <Tick />}<div><b>Brand mention found</b><span><mark>@YummChips</mark> appears in the post and comments</span><small>Detected immediately after publishing</small></div></div>
-        <div className={`outreach-draft${drafted ? ' visible' : ''}`}><header>{drafted && <Tick />}<span>CUSTOMER OUTREACH DRAFT</span></header><p>Hi Sarah, we&apos;re sorry about the <b>YummChips</b> product you found. We&apos;d like to investigate and help.</p><Reveal visible={contacted} className="outreach-contact"><strong>Sarah Mitchell</strong><small>✓ Preferred contact recorded · consent captured</small></Reveal></div>
-        <div className={`social-handoff${handedOff ? ' visible' : ''}`}><header>{handedOff && <Tick />}<span>INVESTIGATION READY</span></header><strong>Sarah&apos;s complaint, contact details, and product evidence are ready for the Orchestrator</strong></div>
-      </div>
-    </div>
-  </div>;
 }
 
 function OrchestratorVisual({ progress, ready, onAdvance, paused }: Pick<Props, 'onAdvance' | 'paused'> & { progress: number; ready: boolean }) {
