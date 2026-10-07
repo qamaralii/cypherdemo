@@ -32,6 +32,7 @@ type Region = 'North' | 'South' | 'East' | 'West' | 'Central';
 interface Props {
   stage: WorkflowStage;
   paused: boolean;
+  agentElapsed?: number;
   decision: Decision | null;
   regions: Region[];
   publicDraft: string;
@@ -71,7 +72,7 @@ function activeStageId(stage: WorkflowStage): WorkflowStage {
 }
 
 export function WorkflowPanel(props: Props) {
-  const { stage, paused, decision, regions: selectedRegions, publicDraft, channels: selectedChannels, customerDraft, compensation, approvalFeedback } = props;
+  const { stage, paused, agentElapsed = 0, decision, regions: selectedRegions, publicDraft, channels: selectedChannels, customerDraft, compensation, approvalFeedback } = props;
   const activeId = activeStageId(stage);
   const activeIndex = stages.findIndex((item) => item.id === activeId);
   const selectedStores = selectedRegions.reduce((total, region) => total + (regions.find((item) => item.name === region)?.stores ?? 0), 0);
@@ -117,6 +118,7 @@ export function WorkflowPanel(props: Props) {
     <section className="workflow-panel" data-stage={stage} data-paused={paused}>
       <header className="workflow-heading">
         <div><span>02 /</span><h2>Intugle Agent Workflow</h2></div>
+        <div className="workflow-agent-timer" role="timer" aria-label="Agent elapsed time"><strong>{(agentElapsed / 30_000).toFixed(2)}</strong><span>mins</span><small>Simulated elapsed</small></div>
         <p>Connected evidence, governed decisions, auditable action</p>
       </header>
 
