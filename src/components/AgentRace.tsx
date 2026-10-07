@@ -249,6 +249,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
         <WorkflowPanel
           stage={workflowStage}
           paused={workflowPaused}
+          agentElapsed={comparisonElapsed}
           decision={decision}
           regions={regions}
           publicDraft={publicDraft}
