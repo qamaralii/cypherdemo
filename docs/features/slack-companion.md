@@ -2,7 +2,7 @@
 
 The demo stays on the laptop through the videos and the human-team thread. When the human summary appears, the laptop shows a QR code;
 the visitor joins a Slack-style workspace on their phone and taps “Unlock Intugle's Agentic Alpha” to start the agents.
-The phone opens in #incidents: a fresh Slack channel (name, creator, description, action chips; no history) plus the Unlock button (#general holds only the welcome). While the Social Media Agent runs, the channel stays empty and silent. Once its run completes (and at least 4 s after the app opened), an urgent alert arrives (push-style banner, alarm, vibration) that @-mentions the visitor and fills the channel. Stepping the laptop back before the alert re-arms it; a plain phone reload does not replay it.
+The phone opens in #incidents: a fresh Slack channel (name, creator, description; no history) plus the Unlock button (#general holds only the welcome). While the Social Media Agent runs, the channel stays empty and silent. Once its run completes (and at least 4 s after the app opened), an urgent alert arrives (push-style banner, alarm, vibration) that @-mentions the visitor and fills the channel. Stepping the laptop back before the alert re-arms it; a plain phone reload does not replay it.
 When its run finishes, the Social Media Agent asks the visitor to **Start investigation** (a HITL gate, `socialMediaApproval`) before the Planner Agent begins.
 Each later approval is likewise posted by its agent and answered from the phone. The agents' channel is `#incidents`:
 each agent posts at most two messages (status lines are folded into its request; it shows as typing while it works);

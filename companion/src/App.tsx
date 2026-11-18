@@ -216,7 +216,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   </div>;
 }
 
-/** The top of a Slack channel with no history yet: name, who created it, the description, and the usual action chips. */
+/** The top of a Slack channel with no history yet: name, who created it, and the description. */
 function ChannelIntro({ id }: { id: ChannelId }) {
   const { name, topic } = CHANNELS[id];
   const creator = id === 'agents' ? 'Planner Agent' : 'Intugle';
@@ -224,7 +224,6 @@ function ChannelIntro({ id }: { id: ChannelId }) {
     <h2><span aria-hidden="true">#</span> {name}</h2>
     <p><b className="sl-intro-mention">@{creator}</b> created this channel today. This is the very beginning of the <b>#{name}</b> channel.</p>
     <p className="sl-intro-desc"><span>Description</span>{topic}</p>
-    <div className="sl-intro-chips" aria-hidden="true"><span>＋ Add people</span><span>✎ Edit description</span><span>🔔 Notifications on</span></div>
   </section>;
 }
 
@@ -288,7 +287,7 @@ function GateBlock({ gate, state, approving, act }: { gate: GateView; state: Dem
       return <div className="sl-blocks">
         <div className="sl-field-label">{stores} of 40 stores selected</div>
         <div className="sl-checks">
-          {regionOptions.map((region) => <Check key={region.name} checked={state.regions.includes(region.name)} disabled={disabled} onClick={() => act({ type: 'toggleRegion', region: region.name })} label={region.name} detail={`${region.stores} stores`} />)}
+          {regionOptions.map((region) => <Check key={region.name} checked={state.regions.includes(region.name)} disabled={disabled} onClick={() => act({ type: 'toggleRegion', region: region.name })} label={region.name} detail={`${region.stores} stores affected`} />)}
         </div>
         {!gate.resolvedText && <div className="sl-actions">
           <button className="sl-btn" disabled={disabled} onClick={() => act({ type: 'setRegions', regions: regionOptions.map((item) => item.name) as Region[] })}>Select all 40</button>

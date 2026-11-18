@@ -65,8 +65,6 @@ button:disabled { cursor: default; }
 .sl-intro-mention { color: var(--sl-blue); font-weight: 600; }
 .sl-intro-desc { padding: 10px 12px; border: 1px solid var(--sl-border); border-radius: 8px; }
 .sl-intro-desc span { display: block; color: var(--sl-text); font-size: 13px; font-weight: 800; }
-.sl-intro-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.sl-intro-chips span { padding: 6px 10px; border: 1px solid #cfcfcf; border-radius: 6px; color: var(--sl-text); font-size: 13px; font-weight: 700; }
 
 /* Empty incident channel before the agents start: just the Unlock button. */
 .sl-empty { display: grid; place-items: center; padding: 28px 20px; }
