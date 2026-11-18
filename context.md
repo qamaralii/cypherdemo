@@ -10,6 +10,8 @@ Offline React booth demo for a food-safety incident. It contrasts delayed human 
 - Run: `npm run dev`
 - Validate: `npm run build` and `npx oxlint src`
 - All assets are local under `public/assets/`; deployment works offline with Vite's relative base path.
+- Exception: the optional **Slack phone companion** needs internet (Supabase relay + Railway-hosted phone app). Without its env vars or network the demo runs laptop-only. See [docs/features/slack-companion.md](docs/features/slack-companion.md).
+- Agent/contributor guide: [AGENTS.md](AGENTS.md).
 
 ## Main Experience
 
@@ -124,6 +126,7 @@ Resolution approval and response-option approval transition directly.
 - `Left` / `Right`: message/stage navigation; pending HITLs cannot be bypassed.
 - `R`: replay from opening.
 - `F`: fullscreen.
+- `A`: approve the waiting step for the paired phone (presenter override).
 - `?`: controls.
 - Numeric hops:
   - `1`: Human Teams start
@@ -150,6 +153,9 @@ Resolution approval and response-option approval transition directly.
 | `src/components/WorkflowPanel.tsx` | Agent audit trail, right-side visuals, forms, HITLs, outcomes. |
 | `src/components/race.css` | Workflow, human, stage, map, and feedback styling. |
 | `src/hooks/useSceneController.ts` | Global scene state and keyboard controls. |
+| `shared/` | Copy, agent roster and laptop↔phone protocol shared with the phone app. |
+| `src/companion/` | Phone companion session, QR card and action relay (laptop side). |
+| `companion/` | Slack-style phone app (separate Vite build). |
 
 ## Visual Rules
 
@@ -157,4 +163,4 @@ Resolution approval and response-option approval transition directly.
 - Use `carton`, not `pallet`.
 - Keep business language plain and outcome-led.
 - Right-side visuals must communicate each agent's work without requiring the left-side audit trail.
-- Do not introduce cloud/API dependencies or external runtime assets.
+- Do not introduce cloud/API dependencies or external runtime assets into the laptop's core flow; the phone companion is the one sanctioned, optional exception and must keep laptop-only mode working.
