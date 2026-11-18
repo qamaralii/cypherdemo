@@ -3,6 +3,7 @@
 
 export type WorkflowStage =
   | 'socialMedia'
+  | 'socialMediaApproval'
   | 'orchestrator'
   | 'orchestratorApproval'
   | 'identification'

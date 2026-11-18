@@ -106,7 +106,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         if (isCurrent) alert = { id: 'social-alert', title: 'Social Media Agent', body: `🚨 @${me}, a customer post about mouldy YummChips is going viral.` };
         post({ id: 'socialMedia-update', author: agent('socialMedia'), text: 'Checking the post and collecting Sarah’s contact details.' });
         if (isCurrent) { agentsTyping = agent('socialMedia').name; return; }
-        post({ id: 'socialMedia-result', author: agent('socialMedia'), text: 'Complaint confirmed minutes after it was posted. I’ve messaged @sarah_mitchell and collected her contact details. Handing over to the Planner Agent.' });
+        post({ id: 'socialMedia-result', author: agent('socialMedia'), text: 'Complaint confirmed minutes after it was posted. I’ve messaged @sarah_mitchell and collected her contact details.' });
         return;
       }
 
@@ -119,7 +119,8 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         const owner = GATE_AGENT[stage];
         const ready = isCurrent && state.gateReady;
         const processing = isCurrent && state.feedback === stage;
-        if (owner !== 'orchestrator') post({ id: `${stage}-update`, author: agent(owner), text: workflowStages.find((item) => item.id === owner)!.update });
+        // Gates that follow their agent's own run (Social Media, Planner) don't repeat the agent's status update.
+        if (owner === stage) post({ id: `${stage}-update`, author: agent(owner), text: workflowStages.find((item) => item.id === owner)!.update });
         if (!past && !ready && !processing) { agentsTyping = agent(owner).name; return; }
         const interactive = isCurrent && ready && !processing && live;
         if (interactive) activeGate = stage;
@@ -160,6 +161,7 @@ function stageResult(stage: WorkflowStage): { text: string; card?: Card } | null
 
 function gatePrompt(stage: GateStage, me: string) {
   switch (stage) {
+    case 'socialMediaApproval': return `@${me}, this needs an investigation. Shall I hand it to the Planner Agent?`;
     case 'orchestratorApproval': return `@${me}, here’s the incident plan. Approve it and I’ll put the agents to work.`;
     case 'resolution': return `@${me}, the evidence is in. How should we respond?`;
     case 'recall': return `@${me}, which regions should I withdraw stock from?`;
@@ -173,6 +175,7 @@ function resolvedText(stage: GateStage, state: DemoState, who: string) {
     const decision = config.agentRace.decisions.find((item) => item.id === state.decisionId);
     return `✅ ${who} chose: ${decision?.title ?? 'a response'}`;
   }
+  if (stage === 'socialMediaApproval') return `✅ ${who} started the investigation`;
   const verb = stage === 'comms' ? 'approved publishing' : stage === 'support' ? 'approved the reply' : stage === 'recall' ? 'approved the withdrawal' : 'approved the plan';
   return `✅ ${who} ${verb}`;
 }

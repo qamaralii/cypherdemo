@@ -3,7 +3,8 @@
 The demo stays on the laptop through the videos and the human-team thread. When the human summary appears, the laptop shows a QR code;
 the visitor joins a Slack-style workspace on their phone and taps “Unlock Intugle's Agentic Alpha” to start the agents.
 The Social Media Agent opens with an urgent alert (push-style banner, alarm, vibration) that @-mentions the visitor.
-Each agent approval is then posted by its agent and answered from the phone. The agents' channel is `#yummchips-incident`:
+When its run finishes, the Social Media Agent asks the visitor to **Start investigation** (a HITL gate, `socialMediaApproval`) before the Planner Agent begins.
+Each later approval is likewise posted by its agent and answered from the phone. The agents' channel is `#yummchips-incident`:
 no batch number appears before the Identification Agent finds it (the Planner Agent stage is batch-free on both screens).
 The laptop waits for the phone at every gate (presenter override: `A`). With no Supabase env vars the demo runs laptop-only.
 

@@ -2538,3 +2538,16 @@
 @keyframes phone-wait-buzz { 0%, 60%, 100% { transform: rotate(0); } 64% { transform: rotate(-9deg); } 70% { transform: rotate(8deg); } 76% { transform: rotate(-6deg); } 82% { transform: rotate(4deg); } }
 [data-paused="true"] .phone-wait-icon { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { .phone-wait-banner, .phone-wait-icon { animation: none; } }
+
+/* ── Social Media Agent: “start the investigation” approval, inside the Investigation-ready card ── */
+.sm-gate { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.sm-gate > .sm-run-workspace { flex: 1; min-height: 0; }
+.sm-gate[data-ready] .sm-run-handoff { border-color: rgba(199,82,125,.55); box-shadow: 0 0 0 3px rgba(199,82,125,.14); }
+.sm-gate .sm-run-handoff-check { display: flex; align-items: center; gap: 8px; }
+.sm-gate .sm-gate-action, .sm-gate .sm-gate-wait { margin: 0 0 0 auto; flex-shrink: 0; animation: sm-gate-in .4s cubic-bezier(.22,.8,.24,1) both; }
+.sm-gate .sm-gate-action { padding: 8px 14px; font-size: 12px; }
+.workflow-visual[data-remote] .sm-gate-action { display: none; }
+.sm-gate-wait { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #fff0f5; color: #9b3a60; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.sm-gate-wait b { display: inline-block; animation: phone-wait-buzz 1.6s ease-in-out infinite; }
+@keyframes sm-gate-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .sm-gate .sm-gate-action, .sm-gate .sm-gate-wait, .sm-gate-wait b { animation: none; } }

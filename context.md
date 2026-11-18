@@ -52,6 +52,7 @@ Opening
 
 ```text
 Social Media Agent
+-> Start investigation (HITL)
 -> Planner Agent plan drafting
 -> Approve plan (HITL)
 -> Identification Agent

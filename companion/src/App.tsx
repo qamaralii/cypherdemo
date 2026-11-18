@@ -228,6 +228,9 @@ function GateBlock({ gate, state, approving, act }: { gate: GateView; state: Dem
   const approve = (label: string, extra: Partial<Extract<PhoneAction, { type: 'approve' }>> = {}, blocked = false) => gate.resolvedText ? footer : <div className="sl-actions"><button className="sl-btn primary" disabled={disabled || blocked} onClick={() => act({ type: 'approve', stage: gate.stage, ...extra })}>{approving ? 'Sending…' : label}</button></div>;
 
   switch (gate.stage) {
+    case 'socialMediaApproval':
+      return <div className="sl-blocks">{approve('🔍 Start investigation')}</div>;
+
     case 'orchestratorApproval':
       return <div className="sl-blocks">
         <ol className="sl-plan">{orchestratorPlan.map(([title, detail]) => <li key={title}><b>{title}</b><small>{detail}</small></li>)}</ol>

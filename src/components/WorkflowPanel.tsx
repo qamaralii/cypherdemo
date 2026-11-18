@@ -51,7 +51,7 @@ const regions = regionOptions;
 const channels = channelOptions;
 
 function activeStageId(stage: WorkflowStage): WorkflowStage {
-  return stage === 'orchestratorApproval' ? 'orchestrator' : stage === 'outcome' ? 'support' : stage;
+  return stage === 'socialMediaApproval' ? 'socialMedia' : stage === 'orchestratorApproval' ? 'orchestrator' : stage === 'outcome' ? 'support' : stage;
 }
 
 export function WorkflowPanel(props: Props) {
@@ -87,6 +87,7 @@ export function WorkflowPanel(props: Props) {
    useEffect(() => { onGateReadyChange?.(gateReady); }, [gateReady, onGateReadyChange]);
   const runColumnRef = useRef<HTMLDivElement>(null);
   const approvalAgent: Partial<Record<WorkflowStage, WorkflowStage>> = {
+    socialMediaApproval: 'socialMedia',
     orchestratorApproval: 'orchestrator',
     resolution: 'resolution',
     recall: 'recall',
@@ -140,7 +141,7 @@ export function WorkflowPanel(props: Props) {
             <div className="workflow-product-rail"><img src="/assets/intugle-icon.svg" alt="Intugle" /><span>AI</span></div>
             <div className="workflow-visual" data-remote={remoteLocked || undefined}>
               <header><span>{visualLabel(stage)}</span><small>{stage === 'outcome' ? 'AUDIT TRAIL COMPLETE' : 'LIVE WORKSPACE'}</small></header>
-              {stage === 'socialMedia' && <SocialMediaAgentRun progress={visualProgress} />}
+              {(stage === 'socialMedia' || stage === 'socialMediaApproval') && <SocialMediaVisual progress={stage === 'socialMediaApproval' ? 1 : visualProgress} ready={stage === 'socialMediaApproval'} onApprove={() => props.onApproval('socialMediaApproval')} paused={paused || remoteLocked} remoteDecider={remoteLocked ? props.remoteDecider : null} />}
               {(stage === 'orchestrator' || stage === 'orchestratorApproval') && <OrchestratorVisual progress={visualProgress} ready={stage === 'orchestratorApproval'} onAdvance={() => props.onApproval('orchestratorApproval')} paused={paused || Boolean(approvalFeedback) || remoteLocked} />}
               {stage === 'identification' && <BatchLabelScan progress={visualProgress} />}
               {stage === 'rca' && <RcaAgentRun progress={visualProgress} />}
@@ -149,7 +150,7 @@ export function WorkflowPanel(props: Props) {
               {stage === 'comms' && <CommsVisual progress={progress} draft={publicDraft} channels={selectedChannels} onDraft={props.onPublicDraft} onToggle={props.onToggleChannel} onAdvance={() => props.onApproval('comms')} paused={controlsPaused} />}
               {stage === 'support' && <SupportVisual progress={progress} draft={customerDraft} compensation={compensation} onDraft={props.onCustomerDraft} onCompensation={props.onCompensation} onAdvance={() => props.onApproval('support')} paused={controlsPaused} />}
               {stage === 'outcome' && <OutcomeVisual decision={decision} selectedStores={selectedStores} compensation={compensation} showCustomerUpdate={showCustomerUpdate} onViewCustomerUpdate={() => setShowCustomerUpdate(true)} onBackToOutcome={() => setShowCustomerUpdate(false)} />}
-              {remoteLocked && gateReady && <PhoneWaitBanner name={props.remoteDecider!} agent={stages.find((item) => item.id === GATE_AGENT[stage as keyof typeof GATE_AGENT])?.name ?? 'An agent'} />}
+              {remoteLocked && gateReady && stage !== 'socialMediaApproval' && <PhoneWaitBanner name={props.remoteDecider!} agent={stages.find((item) => item.id === GATE_AGENT[stage as keyof typeof GATE_AGENT])?.name ?? 'An agent'} />}
               {approvalFeedback && <ApprovalFeedback stage={approvalFeedback} regions={selectedRegions} channels={selectedChannels} compensation={compensation} />}
             </div>
           </div>
@@ -193,6 +194,14 @@ function ApprovalFeedback({ stage, regions: selectedRegions, channels, compensat
   }
   if (stage === 'comms') return <div className="approval-feedback feedback-comms"><span>PUBLIC RESPONSE PUBLISHED</span><strong>{channels.length} selected channels updated</strong><div className="feedback-channel-row">{channels.map((channel) => <b key={channel}>{channel}</b>)}</div><p>The approved public statement is now distributing.</p></div>;
   return <div className="approval-feedback feedback-support"><span>CUSTOMER RESPONSE SENT</span><strong>Sarah&apos;s case has been updated</strong><div className="feedback-message"><b>To Sarah Mitchell</b><p>Personal response delivered · {compensation} confirmed</p></div><p>Customer care record linked to the incident.</p></div>;
+}
+
+function SocialMediaVisual({ progress, ready, onApprove, paused, remoteDecider }: { progress: number; ready: boolean; onApprove: () => void; paused: boolean; remoteDecider?: string | null }) {
+  // The approval sits in the “Investigation ready” card, so the finished run stays fully visible.
+  const action = !ready ? null : remoteDecider
+    ? <span className="sm-gate-wait" role="status"><b aria-hidden="true">📱</b>Waiting for {remoteDecider} on Slack</span>
+    : <button className="approval-action sm-gate-action" disabled={paused} onClick={onApprove}>Start investigation →</button>;
+  return <div className="sm-gate" data-ready={ready || undefined}><SocialMediaAgentRun progress={progress} action={action} /></div>;
 }
 
 function OrchestratorVisual({ progress, ready, onAdvance, paused }: Pick<Props, 'onAdvance' | 'paused'> & { progress: number; ready: boolean }) {

@@ -7,14 +7,15 @@ import type { Compensation, Region, WorkflowStage } from './workflow';
 export type DemoScene = 'opening' | 'f1' | 'f2a' | 'f2b' | 'f2c' | 'f3' | 'socialPost' | 'agentRace' | 'resolution' | 'end';
 export type HumanStage = 'intro' | 'running' | 'summary';
 export type DecisionId = 'full' | 'recall' | 'nothing';
-export type GateStage = 'orchestratorApproval' | 'resolution' | 'recall' | 'comms' | 'support';
+export type GateStage = 'socialMediaApproval' | 'orchestratorApproval' | 'resolution' | 'recall' | 'comms' | 'support';
 export type Approver = 'phone' | 'presenter';
 
-export const GATE_STAGES: GateStage[] = ['orchestratorApproval', 'resolution', 'recall', 'comms', 'support'];
+export const GATE_STAGES: GateStage[] = ['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'comms', 'support'];
 export const isGate = (stage: WorkflowStage | null): stage is GateStage => GATE_STAGES.includes(stage as GateStage);
 
 /** Which agent asks for each approval. */
 export const GATE_AGENT: Record<GateStage, WorkflowStage> = {
+  socialMediaApproval: 'socialMedia',
   orchestratorApproval: 'orchestrator',
   resolution: 'resolution',
   recall: 'recall',
@@ -95,7 +96,7 @@ export const EVENTS = {
 
 /** Workflow stages in the order this run visits them, given the response decision. */
 export function stagePath(decisionId: DecisionId | null): WorkflowStage[] {
-  const head: WorkflowStage[] = ['socialMedia', 'orchestrator', 'orchestratorApproval', 'identification', 'rca', 'resolution'];
+  const head: WorkflowStage[] = ['socialMedia', 'socialMediaApproval', 'orchestrator', 'orchestratorApproval', 'identification', 'rca', 'resolution'];
   const tail: WorkflowStage[] = decisionId === 'nothing' ? [] : decisionId === 'recall' ? ['recall', 'support'] : ['recall', 'comms', 'support'];
   return [...head, ...tail, 'outcome'];
 }

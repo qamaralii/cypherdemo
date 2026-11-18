@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { config } from '../config';
@@ -13,7 +14,8 @@ function Check({ visible }: { visible: boolean }) {
   return <span className="sm-run-check" aria-label={visible ? 'Complete' : undefined}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></span>;
 }
 
-export function SocialMediaAgentRun({ progress }: { progress: number }) {
+/** `action` renders in the “Investigation ready” card header: the Start-investigation approval (or the wait-for-phone note). */
+export function SocialMediaAgentRun({ progress, action }: { progress: number; action?: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const progressRef = useRef(progress);
@@ -123,7 +125,7 @@ export function SocialMediaAgentRun({ progress }: { progress: number }) {
       <div className="sm-run-cards">
         <section className="sm-run-card sm-run-detection"><div className="sm-run-found"><header className="sm-run-detected-check"><Check visible={detected} /><h4>Brand mention found</h4></header><p><b>@YummChips</b> appears in the post and comments</p><small>Detected immediately after publishing</small></div><div className="sm-run-listening"><div className="sm-run-radar"><i className="sm-run-radar-sweep" /><b /></div><div><small>LISTENING</small><h4>Watching for @YummChips tags</h4></div><strong>{time >= 2.6 ? '1' : '0'}<small>MENTIONS FOUND</small></strong></div></section>
         <section className="sm-run-card sm-run-outreach" inert={!outreach}><header className="sm-run-outreach-check"><Check visible={sent} /><h4>Customer outreach draft</h4></header><div className="sm-run-bubble"><span className="sm-run-message-size" aria-hidden="true">{MESSAGE}</span><span className="sm-run-typed" /><i className="sm-run-cursor" hidden={time >= 7.4} /></div><div className="sm-run-sent">✓✓ Sent via Instagram</div><div className="sm-run-reply"><div className="sm-run-typing" aria-hidden="true"><i /><i /><i /></div><span className="sm-run-reply-received">✓ Reply received</span></div><div className="sm-run-contact"><b>Sarah Mitchell</b><p>Preferred contact recorded · consent captured</p></div></section>
-        <section className="sm-run-card sm-run-handoff" inert={!handoff}><header className="sm-run-handoff-check"><Check visible={complete} /><h4>Investigation ready</h4></header><p>Sarah’s complaint, contact details, and product evidence are ready for the Planner Agent.</p><div className="sm-run-transfer"><div className="sm-run-evidence">{['Complaint post', 'Contact details', 'Product evidence'].map(label => <span key={label}><i />{label}</span>)}</div><svg className="sm-run-wires" viewBox="0 0 80 108" preserveAspectRatio="none" aria-hidden="true">{WIRE_Y.map((y, i) => <g key={y}><path d={`M0 ${y} C40 ${y},40 54,80 54`} /><circle className={`sm-run-packet-${i}`} cx="0" cy={y} r="3" /></g>)}</svg><div className="sm-run-orchestrator"><span>⌁</span>Orchestrator</div></div></section>
+        <section className="sm-run-card sm-run-handoff" inert={!handoff}><header className="sm-run-handoff-check"><Check visible={complete} /><h4>Investigation ready</h4>{action}</header><p>Sarah’s complaint, contact details, and product evidence are ready for the Planner Agent.</p><div className="sm-run-transfer"><div className="sm-run-evidence">{['Complaint post', 'Contact details', 'Product evidence'].map(label => <span key={label}><i />{label}</span>)}</div><svg className="sm-run-wires" viewBox="0 0 80 108" preserveAspectRatio="none" aria-hidden="true">{WIRE_Y.map((y, i) => <g key={y}><path d={`M0 ${y} C40 ${y},40 54,80 54`} /><circle className={`sm-run-packet-${i}`} cx="0" cy={y} r="3" /></g>)}</svg><div className="sm-run-orchestrator"><span>⌁</span>Planner</div></div></section>
       </div>
     </div>
     <div className="sm-run-flight" aria-hidden="true"><i /><i /><i /></div>

@@ -79,7 +79,8 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   const advanceWorkflow = useCallback(() => {
     setWorkflowStage((current) => {
       if (!current) return current;
-      if (current === 'socialMedia') return 'orchestrator';
+      if (current === 'socialMedia') return 'socialMediaApproval';
+      if (current === 'socialMediaApproval') return 'orchestrator';
       if (current === 'orchestrator') return 'orchestratorApproval';
       if (current === 'orchestratorApproval') return 'identification';
       if (current === 'identification') return 'rca';
@@ -102,7 +103,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   /** One entry point for every approval, whether it came from the phone, the presenter override, or the laptop UI (laptop-only mode). */
   const approveGate = useCallback((stage: GateStage, by: Approver) => {
     setApprovals((current) => ({ ...current, [stage]: by }));
-    if (stage === 'resolution') advanceWorkflow();
+    if (stage === 'resolution' || stage === 'socialMediaApproval') advanceWorkflow();
     else approveWithFeedback(stage);
   }, [advanceWorkflow, approveWithFeedback]);
 
@@ -230,7 +231,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       }
       return true;
     }
-    if (['orchestratorApproval', 'resolution', 'recall', 'comms', 'support', 'outcome'].includes(workflowStage)) return true;
+    if (['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'comms', 'support', 'outcome'].includes(workflowStage)) return true;
     advanceWorkflow();
     return true;
   }, [workflowStage, humanStage, humanMessageIndex, advanceWorkflow, viewingHumanReport]);
@@ -255,7 +256,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       return true;
     }
     const previous: Partial<Record<WorkflowStage, WorkflowStage>> = {
-       orchestrator: 'socialMedia', orchestratorApproval: 'orchestrator', identification: 'orchestratorApproval', rca: 'identification', resolution: 'rca', recall: 'resolution', comms: 'recall', support: decision?.id === 'full' ? 'comms' : 'recall', outcome: decision?.id === 'nothing' ? 'resolution' : 'support',
+       socialMediaApproval: 'socialMedia', orchestrator: 'socialMediaApproval', orchestratorApproval: 'orchestrator', identification: 'orchestratorApproval', rca: 'identification', resolution: 'rca', recall: 'resolution', comms: 'recall', support: decision?.id === 'full' ? 'comms' : 'recall', outcome: decision?.id === 'nothing' ? 'resolution' : 'support',
     };
     const target = previous[workflowStage];
     if (target) setWorkflowStage(target);
