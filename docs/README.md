@@ -2,6 +2,7 @@
 
 ## Features
 - [Incident workflow presentation](features/incident-workflow.md)
+- [Slack companion (phone)](features/slack-companion.md)
 
 ## Sessions
 - [2026-10-06 — Batch label scan integration](sessions/2026-10-06-batch-label-scan.md)
