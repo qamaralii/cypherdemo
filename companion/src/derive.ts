@@ -78,6 +78,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
     text: `Welcome, @${me}! The human team has spent 13 hrs 40 mins on this incident and still can’t confirm the cause. Let’s give the same incident to Intugle’s agents. You’re the human in the loop: they’ll ask you for every critical decision.`,
   }];
   if (waitingToStart && live) general.push({ id: 'start', author: intugleBot, time: clock(0), text: 'Ready when you are.', card: { kind: 'start', label: config.agentRace.agentPrompt.yes.replace(/\s*→\s*$/, '') } });
+  if (inWorkflow && state.stage !== null && !state.stayedHuman) general.push({ id: 'agents-on-it', author: intugleBot, time: clock(1), text: '🚀 Intugle’s agents are on it. Keep watching the big screen: they’ll message you here when they need you.' });
   if (state.stayedHuman) general.push({ id: 'stayed-human', author: intugleBot, time: clock(1), text: 'The team chose to stay with the human process.', card: outcomeCard(state) });
 
   // ── #yummchips-incident: the agents ──
@@ -99,13 +100,14 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
       const past = index < current;
 
       if (stage === 'socialMedia') {
+        // The visitor hears nothing while the agent works; everything arrives with the alert once its run is complete.
+        if (isCurrent) return;
         const post_ = config.socialPost;
         const alertText = `🚨 @${me}, something’s wrong. A customer post about mouldy YummChips is spreading fast and tags @YummChips.`;
         post({ id: 'social-alert', author: agent('socialMedia'), urgent: true, text: alertText, card: { kind: 'alert', handle: post_.customerHandle, caption: post_.caption, stats: `${compact(post_.counters.likes)} dislikes · ${compact(post_.counters.comments)} comments · posted ${post_.timeAgo.toLowerCase()}` } });
-        // Only while the Social Media Agent is live: a phone that reconnects later doesn't replay the alarm.
-        if (isCurrent) alert = { id: 'social-alert', title: 'Social Media Agent', body: `🚨 @${me}, a customer post about mouldy YummChips is going viral.` };
+        // Raised when the run completes (the Start-investigation gate is open), not while the agent is still working.
+        if (state.stage === 'socialMediaApproval') alert = { id: 'social-alert', title: 'Social Media Agent', body: `🚨 @${me}, a customer post about mouldy YummChips is going viral.` };
         post({ id: 'socialMedia-update', author: agent('socialMedia'), text: 'Checking the post and collecting Sarah’s contact details.' });
-        if (isCurrent) { agentsTyping = agent('socialMedia').name; return; }
         post({ id: 'socialMedia-result', author: agent('socialMedia'), text: 'Complaint confirmed minutes after it was posted. I’ve messaged @sarah_mitchell and collected her contact details.' });
         return;
       }
@@ -143,7 +145,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
   return {
     channels: {
       general: { id: 'general', visible: true, messages: general, typing: null },
-      agents: { id: 'agents', visible: inWorkflow && state.stage !== null && !state.stayedHuman, messages: agents, typing: agentsTyping },
+      agents: { id: 'agents', visible: inWorkflow && state.stage !== null && state.stage !== 'socialMedia' && !state.stayedHuman, messages: agents, typing: agentsTyping },
     },
     gates,
     activeGate,

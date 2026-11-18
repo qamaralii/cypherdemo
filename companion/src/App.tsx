@@ -63,6 +63,15 @@ function JoinScreen({ busy, onJoin }: { busy: boolean; onJoin: (name: string) =>
   </main>;
 }
 
+/** The workspace gets this long to settle before any alert can fire, and alerts always trail their trigger slightly. */
+const SETTLE_MS = 4000;
+const ALERT_MIN_DELAY_MS = 1500;
+
+// Alerts already delivered on this phone for this run, so a reload doesn't replay the alarm.
+const alertsKey = `cypher-companion:alerts:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
+function readShownAlerts(): string[] { try { return JSON.parse(localStorage.getItem(alertsKey) ?? '[]'); } catch { return []; } }
+function saveShownAlerts(ids: string[]) { try { localStorage.setItem(alertsKey, JSON.stringify(ids)); } catch { /* private mode */ } }
+
 type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status' | 'me' | 'connected' | 'send'>;
 
 function Workspace({ state, status, me, connected, send }: SessionApi) {
@@ -74,23 +83,34 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   const [approving, setApproving] = useState<GateStage | null>(null);
   const feed = useRef<HTMLDivElement>(null);
   const lastAlert = useRef<GateStage | null>(null);
-  const shownAlerts = useRef(new Set<string>());
+  const mountedAt = useRef(Date.now());
+  const [shownAlerts, setShownAlerts] = useState<string[]>(readShownAlerts);
 
   useEffect(() => keepAwake(), []);
 
   // Agent alerts arrive like a push notification: banner, alarm, vibration, then the agents channel opens.
+  // They never fire the instant the app opens: the workspace gets a few seconds to settle first.
   const alertId = view.alert?.id;
   const alertRef = useRef(view.alert);
   alertRef.current = view.alert;
+  const alertPending = Boolean(alertId && !shownAlerts.includes(alertId));
   useEffect(() => {
-    const incoming = alertRef.current;
-    if (!alertId || !incoming || shownAlerts.current.has(alertId)) return;
-    shownAlerts.current.add(alertId);
-    setNotice({ title: incoming.title, body: incoming.body });
-    setDrawer(false);
-    playAlarm();
-    buzz([220, 90, 220, 90, 220]);
-  }, [alertId]);
+    if (!alertId || shownAlerts.includes(alertId)) return;
+    const delay = Math.max(ALERT_MIN_DELAY_MS, mountedAt.current + SETTLE_MS - Date.now());
+    const timer = window.setTimeout(() => {
+      const incoming = alertRef.current;
+      if (!incoming) return;
+      setShownAlerts((current) => { const next = [...current, incoming.id]; saveShownAlerts(next); return next; });
+      setNotice({ title: incoming.title, body: incoming.body });
+      setDrawer(false);
+      playAlarm();
+      buzz([220, 90, 220, 90, 220]);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [alertId, shownAlerts]);
+
+  // The agents' channel stays out of sight until its alert has been delivered.
+  const channels = useMemo(() => ({ ...view.channels, agents: { ...view.channels.agents, visible: view.channels.agents.visible && !alertPending } }), [view.channels, alertPending]);
 
   useEffect(() => {
     if (!notice) return;
@@ -101,22 +121,28 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
 
   // Back to #general if the laptop steps back out of the agent workflow.
   useEffect(() => {
-    if (!view.channels.agents.visible) setActive('general');
-  }, [view.channels.agents.visible]);
+    if (!channels.agents.visible) setActive('general');
+  }, [channels.agents.visible]);
 
   // Approval requests: sound, vibration, and jump to the agents channel.
   useEffect(() => {
     if (view.activeGate && view.activeGate !== lastAlert.current) {
-      playKnock();
-      buzz();
-      setActive('agents');
-      setDrawer(false);
+      // The Start-investigation gate arrives with the incident alert, which has its own sound and reveal;
+      // after a reload (alert already shown) just open the channel quietly.
+      if (view.activeGate === 'socialMediaApproval') {
+        if (!alertPending) setActive('agents');
+      } else {
+        playKnock();
+        buzz();
+        setActive('agents');
+        setDrawer(false);
+      }
     }
     lastAlert.current = view.activeGate;
     if (!view.activeGate) setApproving(null);
-  }, [view.activeGate]);
+  }, [view.activeGate, alertPending]);
 
-  const current = view.channels[active].visible ? view.channels[active] : view.channels.general;
+  const current = channels[active].visible ? channels[active] : channels.general;
   const messageCount = current.messages.length;
 
   useEffect(() => {
@@ -129,7 +155,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
     el.scrollTo({ top: el.scrollHeight, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [current.id, messageCount, current.typing, view.activeGate]);
 
-  const unread = (id: ChannelId) => view.channels[id].visible && id !== current.id ? Math.max(0, view.channels[id].messages.length - seen[id]) : 0;
+  const unread = (id: ChannelId) => channels[id].visible && id !== current.id ? Math.max(0, channels[id].messages.length - seen[id]) : 0;
   const anyUnread = (['general', 'agents'] as ChannelId[]).some((id) => unread(id) > 0);
 
   const act = (action: PhoneAction) => {
@@ -173,7 +199,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
       <header><WorkspaceIcon small /><div><strong>{WORKSPACE}</strong><small>Cypher 2026 · Intugle demo</small></div></header>
       <nav>
         <h2>Channels</h2>
-        {(['general', 'agents'] as ChannelId[]).filter((id) => view.channels[id].visible).map((id) => <button key={id} className={`${id === current.id ? 'active' : ''}${unread(id) ? ' unread' : ''}`} onClick={() => { setActive(id); setDrawer(false); }}>
+        {(['general', 'agents'] as ChannelId[]).filter((id) => channels[id].visible).map((id) => <button key={id} className={`${id === current.id ? 'active' : ''}${unread(id) ? ' unread' : ''}`} onClick={() => { setActive(id); setDrawer(false); }}>
           <span># {CHANNELS[id].name}</span>{unread(id) > 0 && <em>{unread(id)}</em>}
         </button>)}
         <h2>Apps</h2>

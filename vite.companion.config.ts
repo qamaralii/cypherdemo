@@ -8,6 +8,8 @@ const repoRoot = fileURLToPath(new URL('.', import.meta.url))
 export default defineConfig({
   root: 'companion',
   envDir: repoRoot,
+  // Own dependency cache: sharing node_modules/.vite with the laptop dev server makes them invalidate each other (504 Outdated Optimize Dep).
+  cacheDir: fileURLToPath(new URL('./node_modules/.vite-companion', import.meta.url)),
   publicDir: false,
   plugins: [react()],
   build: { outDir: '../dist-companion', emptyOutDir: true },
