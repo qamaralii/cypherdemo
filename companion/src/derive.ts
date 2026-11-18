@@ -7,7 +7,7 @@
 
 import { config } from '../../src/config';
 import { AGENT_CHANNEL, GATE_AGENT, isGate, stagePath, type DemoState, type GateStage, type SessionStatus } from '../../shared/protocol';
-import { storesForRegions, workflowStages, type WorkflowStage } from '../../shared/workflow';
+import { defaultCustomerDraft, defaultPublicDraft, storesForRegions, workflowStages, type WorkflowStage } from '../../shared/workflow';
 
 export type ChannelId = 'general' | 'agents';
 
@@ -236,8 +236,9 @@ function buildReport(state: DemoState, me: string): IncidentReport {
   add('orchestratorApproval', 'Incident plan', 'Approved: identify, investigate, respond');
   add('resolution', 'Response', decision?.title ?? '—');
   add('recall', 'Stock withdrawal', `${stores} of 40 stores · ${state.regions.join(', ') || 'none'}`);
-  add('comms', 'Public statement', `Published on ${state.channels.join(', ')}`);
-  add('support', 'Reply to Sarah', state.compensation === 'Voucher' ? 'Sent with a £40 goodwill voucher' : 'Sent with a curated apology hamper');
+  const rewrote = state.approvals.comms === 'phone' ? 'you' : 'the team';
+  add('comms', 'Public statement', `Published on ${state.channels.join(', ')}${state.publicDraft !== defaultPublicDraft ? ` · rewritten by ${rewrote}` : ''}`);
+  add('support', 'Reply to Sarah', `${state.compensation === 'Voucher' ? 'Sent with a £40 goodwill voucher' : 'Sent with a curated apology hamper'}${state.customerDraft !== defaultCustomerDraft ? ` · rewritten by ${state.approvals.support === 'phone' ? 'you' : 'the team'}` : ''}`);
   const update = state.compensation === 'Voucher' ? config.agentRace.voucherUpdate : config.agentRace.customerUpdate;
   const sarahGetsUpdate = state.decisionId === 'full' || state.decisionId === 'recall';
   return {

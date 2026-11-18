@@ -12,7 +12,7 @@ import './comparison.css';
 import { useCompanion } from '../companion/CompanionProvider';
 import { CompanionQr } from '../companion/CompanionQr';
 import { defaultCustomerDraft, defaultPublicDraft, type Region } from '../../shared/workflow';
-import { isGate, type Approver, type GateStage, type PhoneAction } from '../../shared/protocol';
+import { DRAFT_FOR_GATE, isGate, type Approver, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 type HumanStage = 'intro' | 'running' | 'summary';
 type Decision = typeof config.agentRace.decisions[number];
@@ -178,6 +178,13 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       case 'setRegions': if (workflowStage === 'recall') setRegions(action.regions); return;
       case 'toggleChannel': if (workflowStage === 'comms') toggleChannel(action.channel); return;
       case 'setCompensation': if (workflowStage === 'support') setCompensation(action.compensation); return;
+      case 'setDraft': {
+        const allowed = DRAFT_FOR_GATE[workflowStage];
+        if (!allowed || allowed.field !== action.field) return;
+        const text = action.text.slice(0, allowed.max);
+        if (action.field === 'publicDraft') setPublicDraft(text); else setCustomerDraft(text);
+        return;
+      }
       case 'approve': {
         if (action.stage !== workflowStage) return;
         if (action.stage === 'resolution') {
@@ -191,6 +198,13 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
         if (action.stage === 'recall' && action.regions) { if (!action.regions.length) return; setRegions(action.regions); }
         if (action.stage === 'comms' && action.channels) { if (!action.channels.length) return; setChannels(action.channels); }
         if (action.stage === 'support' && action.compensation) setCompensation(action.compensation);
+        // The approval carries the final text, so a late keystroke can never change what was approved.
+        const draftRule = DRAFT_FOR_GATE[action.stage];
+        if (draftRule && action.draft !== undefined) {
+          const text = action.draft.slice(0, draftRule.max);
+          if (!text.trim()) return;
+          if (draftRule.field === 'publicDraft') setPublicDraft(text); else setCustomerDraft(text);
+        }
         approveGate(action.stage, 'phone');
         return;
       }

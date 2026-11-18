@@ -9,6 +9,12 @@ export type HumanStage = 'intro' | 'running' | 'summary';
 export type DecisionId = 'full' | 'recall' | 'nothing';
 export type GateStage = 'socialMediaApproval' | 'orchestratorApproval' | 'resolution' | 'recall' | 'comms' | 'support';
 export type Approver = 'phone' | 'presenter';
+export type DraftField = 'publicDraft' | 'customerDraft';
+/** Which draft each gate lets the visitor edit, and how long it may get. */
+export const DRAFT_FOR_GATE: Partial<Record<GateStage, { field: DraftField; max: number }>> = {
+  comms: { field: 'publicDraft', max: 1200 },
+  support: { field: 'customerDraft', max: 600 },
+};
 
 export const GATE_STAGES: GateStage[] = ['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'comms', 'support'];
 export const isGate = (stage: WorkflowStage | null): stage is GateStage => GATE_STAGES.includes(stage as GateStage);
@@ -77,7 +83,9 @@ export type PhoneAction =
   | { type: 'toggleChannel'; channel: string }
   | { type: 'setCompensation'; compensation: Compensation }
   /** Approval carries the phone's selections so a late-arriving toggle can never change what was approved. */
-  | { type: 'approve'; stage: GateStage; decisionId?: DecisionId; regions?: Region[]; channels?: string[]; compensation?: Compensation };
+  /** Live text from the phone's Edit sheet; the laptop's draft box mirrors it as the visitor types. */
+  | { type: 'setDraft'; field: DraftField; text: string }
+  | { type: 'approve'; stage: GateStage; decisionId?: DecisionId; regions?: Region[]; channels?: string[]; compensation?: Compensation; draft?: string };
 
 export interface ActionEnvelope {
   token: string;
@@ -114,6 +122,7 @@ export function applySelection(state: DemoState, action: PhoneAction): DemoState
     case 'setRegions': return { ...state, regions: action.regions };
     case 'toggleChannel': return { ...state, channels: state.channels.includes(action.channel) ? state.channels.filter((c) => c !== action.channel) : [...state.channels, action.channel] };
     case 'setCompensation': return { ...state, compensation: action.compensation };
+    case 'setDraft': return { ...state, [action.field]: action.text };
     default: return state;
   }
 }

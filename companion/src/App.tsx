@@ -7,8 +7,8 @@ import voucherImg from './assets/voucher.jpg';
 import { useCompanionSession } from './session';
 import { mockStage, useMockSession } from './mock';
 import { buzz, keepAwake, playAlarm, playKnock, unlockAudio } from './alerts';
-import { channelOptions, compensationOptions, orchestratorPlan, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
-import { AGENT_CHANNEL, type DemoState, type GateStage, type PhoneAction } from '../../shared/protocol';
+import { channelOptions, compensationOptions, defaultCustomerDraft, defaultPublicDraft, orchestratorPlan, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
+import { AGENT_CHANNEL, DRAFT_FOR_GATE, type DemoState, type DraftField, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 const WORKSPACE = 'YummChips';
 
@@ -280,6 +280,24 @@ function CardView({ card, onReport }: { card: Card; onReport: () => void }) {
 }
 
 function GateBlock({ gate, state, approving, act }: { gate: GateView; state: DemoState; approving: boolean; act: (action: PhoneAction) => void }) {
+  const [editing, setEditing] = useState<GateStage | null>(null);
+  const editRule = editing ? DRAFT_FOR_GATE[editing] : undefined;
+  const sheet = editRule && editing === gate.stage && gate.interactive && !approving
+    ? <DraftEditor
+        title={editRule.field === 'publicDraft' ? 'Edit public statement' : 'Edit reply to Sarah'}
+        initial={state[editRule.field]}
+        max={editRule.max}
+        onLive={(text) => act({ type: 'setDraft', field: editRule.field as DraftField, text })}
+        onCancel={() => { act({ type: 'setDraft', field: editRule.field as DraftField, text: originalDraft.current ?? state[editRule.field] }); setEditing(null); }}
+        onDone={(text) => { act({ type: 'setDraft', field: editRule.field as DraftField, text }); setEditing(null); }}
+      />
+    : null;
+  const originalDraft = useRef<string | null>(null);
+  useEffect(() => {
+    if (editRule) originalDraft.current = state[editRule.field];
+    else originalDraft.current = null;
+    // Only capture the text when the sheet opens.
+  }, [editing]);
   const disabled = !gate.interactive || approving;
   const footer = gate.resolvedText ? <div className="sl-resolved">{gate.resolvedText}</div> : null;
   const approve = (label: string, extra: Partial<Extract<PhoneAction, { type: 'approve' }>> = {}, blocked = false) => gate.resolvedText ? footer : <div className="sl-actions"><button className="sl-btn primary" disabled={disabled || blocked} onClick={() => act({ type: 'approve', stage: gate.stage, ...extra })}>{approving ? 'Sending…' : label}</button></div>;
@@ -322,24 +340,26 @@ function GateBlock({ gate, state, approving, act }: { gate: GateView; state: Dem
 
     case 'comms':
       return <div className="sl-blocks">
-        <Quote text={state.publicDraft} />
+        <Quote text={state.publicDraft} onEdit={gate.interactive && !approving ? () => setEditing('comms') : undefined} edited={state.publicDraft !== defaultPublicDraft} />
         <div className="sl-field-label">Publish on · {state.channels.length} selected</div>
         <div className="sl-checks">
           {channelOptions.map((channel) => <Check key={channel} checked={state.channels.includes(channel)} disabled={disabled} onClick={() => act({ type: 'toggleChannel', channel })} label={channel} />)}
         </div>
-        {approve('Publish statement', { channels: state.channels }, state.channels.length === 0)}
+        {approve('Publish statement', { channels: state.channels, draft: state.publicDraft }, state.channels.length === 0 || !state.publicDraft.trim())}
+        {sheet}
       </div>;
 
     case 'support':
       return <div className="sl-blocks">
-        <Quote text={state.customerDraft} />
+        <Quote text={state.customerDraft} onEdit={gate.interactive && !approving ? () => setEditing('support') : undefined} edited={state.customerDraft !== defaultCustomerDraft} />
         <div className="sl-field-label">Make it right with</div>
         <div className="sl-options" role="radiogroup">
           {compensationOptions.map((item) => <button key={item.id} role="radio" aria-checked={state.compensation === item.id} className={`sl-option${state.compensation === item.id ? ' selected' : ''}`} disabled={disabled} onClick={() => act({ type: 'setCompensation', compensation: item.id })}>
             <i className="sl-radio" /><span><b>{item.id}</b><small>{item.detail}</small></span>
           </button>)}
         </div>
-        {approve('Send to Sarah', { compensation: state.compensation })}
+        {approve('Send to Sarah', { compensation: state.compensation, draft: state.customerDraft }, !state.customerDraft.trim())}
+        {sheet}
       </div>;
   }
 }
@@ -351,13 +371,38 @@ function Check({ checked, disabled, onClick, label, detail }: { checked: boolean
   </button>;
 }
 
-function Quote({ text }: { text: string }) {
+function Quote({ text, onEdit, edited = false }: { text: string; onEdit?: () => void; edited?: boolean }) {
   const [open, setOpen] = useState(false);
   const long = text.length > 220;
   return <blockquote className={`sl-quote${long && !open ? ' clamped' : ''}`}>
     <p>{text}</p>
-    {long && <button onClick={() => setOpen((value) => !value)}>{open ? 'Show less' : 'Show more'}</button>}
+    <div className="sl-quote-actions">
+      {long && <button onClick={() => setOpen((value) => !value)}>{open ? 'Show less' : 'Show more'}</button>}
+      {edited && <span className="sl-edited">(edited)</span>}
+      {onEdit && <button className="sl-edit-btn" onClick={onEdit}>✎ Edit</button>}
+    </div>
   </blockquote>;
+}
+
+/** Bottom sheet for editing an agent's draft. Typing updates the laptop's draft box live; Cancel restores the original. */
+function DraftEditor({ title, initial, max, onLive, onCancel, onDone }: { title: string; initial: string; max: number; onLive: (text: string) => void; onCancel: () => void; onDone: (text: string) => void }) {
+  const [text, setText] = useState(initial);
+  const timer = useRef<number | undefined>(undefined);
+  const area = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { area.current?.focus(); return () => window.clearTimeout(timer.current); }, []);
+  const change = (value: string) => {
+    setText(value);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => onLive(value), 300);
+  };
+  return <>
+    <div className="sl-scrim" onClick={onCancel} />
+    <section className="sl-sheet" role="dialog" aria-modal="true" aria-label={title}>
+      <header><button onClick={onCancel}>Cancel</button><strong>{title}</strong><button className="primary" disabled={!text.trim()} onClick={() => { window.clearTimeout(timer.current); onDone(text); }}>Done</button></header>
+      <textarea ref={area} value={text} maxLength={max} onChange={(event) => change(event.target.value)} />
+      <footer><span>Shows live on the big screen</span><span>{text.length}/{max}</span></footer>
+    </section>
+  </>;
 }
 
 /** Full-screen incident report: the visitor's takeaway from the run. */
