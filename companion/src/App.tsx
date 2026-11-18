@@ -76,12 +76,13 @@ function saveShownAlerts(ids: string[]) { try { localStorage.setItem(alertsKey, 
 
 const REPORT_DELAY_MS = 2500;
 const reportKey = `cypher-companion:report:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
+const emailKey = `cypher-companion:email-step:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
 function readFlag(key: string) { try { return localStorage.getItem(key) === '1'; } catch { return false; } }
 function saveFlag(key: string) { try { localStorage.setItem(key, '1'); } catch { /* private mode */ } }
 
-type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status' | 'me' | 'connected' | 'send'>;
+type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status' | 'me' | 'connected' | 'send' | 'submitEmail'>;
 
-function Workspace({ state, status, me, connected, send }: SessionApi) {
+function Workspace({ state, status, me, connected, send, submitEmail }: SessionApi) {
   const view = useMemo(() => derive(state, me, status), [state, me, status]);
   // The phone lives in the incident channel; #general is only background.
   const [active, setActive] = useState<ChannelId>('agents');
@@ -90,13 +91,27 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   const [seen, setSeen] = useState<Record<ChannelId, number>>(() => ({ general: view.channels.general.messages.length, agents: 0 }));
   const [approving, setApproving] = useState<GateStage | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  // Optional email step shown once, just before the report first opens.
+  const [emailStep, setEmailStep] = useState(false);
+  const [savedEmail, setSavedEmail] = useState<string | null>(null);
+  const openReport = () => {
+    setDrawer(false);
+    if (readFlag(emailKey)) setReportOpen(true);
+    else setEmailStep(true);
+  };
+  const finishEmail = (email: string | null) => {
+    saveFlag(emailKey);
+    if (email) setSavedEmail(email);
+    setEmailStep(false);
+    setReportOpen(true);
+  };
 
   // The incident report opens by itself once per run, shortly after the outcome lands; the outcome message can reopen it.
   const hasReport = Boolean(view.report);
   useEffect(() => {
     if (!hasReport) return;
     if (readFlag(reportKey)) return;
-    const timer = window.setTimeout(() => { saveFlag(reportKey); setReportOpen(true); setDrawer(false); }, REPORT_DELAY_MS);
+    const timer = window.setTimeout(() => { saveFlag(reportKey); openReport(); }, REPORT_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [hasReport]);
   const feed = useRef<HTMLDivElement>(null);
@@ -210,7 +225,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
         <button className="sl-btn sl-decline" disabled={status !== 'live'} onClick={() => act({ type: 'stayHuman' })}>{view.start.decline}</button>
       </div>}
       {current.messages.map((msg) => <Message key={msg.id} msg={msg} me={me}>
-        {msg.card && <CardView card={msg.card} onReport={() => setReportOpen(true)} />}
+        {msg.card && <CardView card={msg.card} onReport={openReport} />}
         {msg.gate && view.gates[msg.gate] && <GateBlock gate={view.gates[msg.gate]!} state={state} approving={approving === msg.gate} act={act} />}
       </Message>)}
       {status === 'ended' && current.id !== 'general' && <p className="sl-ended">This demo run has ended. Thanks for being the human in the loop.</p>}
@@ -219,7 +234,8 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
     <div className="sl-typing" aria-live="polite">{current.typing ? <><span className="sl-typing-dots"><i /><i /><i /></span><b>{current.typing}</b> is typing…</> : ' '}</div>
     <footer className="sl-composer"><div>Message #{CHANNELS[current.id].name}</div><span aria-hidden="true">＋</span></footer>
 
-    {reportOpen && view.report && <ReportSheet report={view.report} me={me} onClose={() => setReportOpen(false)} />}
+    {emailStep && view.report && <EmailStep me={me} submit={submitEmail} onDone={finishEmail} />}
+    {reportOpen && view.report && <ReportSheet report={view.report} me={me} email={savedEmail} onClose={() => setReportOpen(false)} />}
 
     {drawer && <div className="sl-scrim" onClick={() => setDrawer(false)} />}
     <aside className={`sl-drawer${drawer ? ' open' : ''}`} aria-hidden={!drawer}>
@@ -406,7 +422,7 @@ function DraftEditor({ title, initial, max, onLive, onCancel, onDone }: { title:
 }
 
 /** Full-screen incident report: the visitor's takeaway from the run. */
-function ReportSheet({ report, me, onClose }: { report: IncidentReport; me: string; onClose: () => void }) {
+function ReportSheet({ report, me, email, onClose }: { report: IncidentReport; me: string; email: string | null; onClose: () => void }) {
   return <div className="sl-report" role="dialog" aria-modal="true" aria-label="Incident report">
     <header className="sl-report-bar">
       <button onClick={onClose} aria-label="Close report">✕</button>
@@ -457,8 +473,40 @@ function ReportSheet({ report, me, onClose }: { report: IncidentReport; me: stri
 
       <footer className="sl-report-foot">
         <p>Every critical decision in this incident was made by a person. The agents connected the evidence and did the work.</p>
+        {email && <p className="sl-report-thanks">Thanks, {me}. The Intugle team will be in touch at <b>{email}</b>.</p>}
         <a href="https://intugle.ai" target="_blank" rel="noreferrer">Built with Intugle · intugle.ai</a>
       </footer>
     </div>
+  </div>;
+}
+
+/** Optional work email, asked once just before the report. Stored in Supabase; nothing is sent to the visitor. */
+function EmailStep({ me, submit, onDone }: { me: string; submit: (email: string) => Promise<'ok' | 'invalid' | 'error'>; onDone: (email: string | null) => void }) {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    const value = email.trim();
+    if (!value) { onDone(null); return; }
+    setBusy(true);
+    setProblem(null);
+    const result = await submit(value);
+    setBusy(false);
+    if (result === 'ok') onDone(value.toLowerCase());
+    else setProblem(result === 'invalid' ? 'That doesn’t look like an email address.' : 'Couldn’t save that just now. You can skip and still see your report.');
+  };
+  return <div className="sl-report sl-email" role="dialog" aria-modal="true" aria-label="Stay in touch">
+    <form onSubmit={save} noValidate>
+      <span className="sl-email-icon" aria-hidden="true">📄</span>
+      <h1>Your incident report is ready</h1>
+      <p>Nice work, {me}. Want to talk about agents like these for your team? Leave your work email and the Intugle team will get in touch.</p>
+      <label htmlFor="visitor-email">Work email <small>(optional)</small></label>
+      <input id="visitor-email" type="email" inputMode="email" autoComplete="email" enterKeyHint="done" placeholder="you@company.com" maxLength={254} value={email} onChange={(event) => { setEmail(event.target.value); setProblem(null); }} />
+      {problem && <p className="sl-email-error" role="alert">{problem}</p>}
+      <button type="submit" className="sl-btn primary big" disabled={busy}>{busy ? 'Saving…' : email.trim() ? 'Continue to report' : 'See my report'}</button>
+      <button type="button" className="sl-btn sl-decline" disabled={busy} onClick={() => onDone(null)}>Skip</button>
+      <small className="sl-email-note">We’ll only use this to contact you about Intugle. We won’t email you the report or add you to a newsletter.</small>
+    </form>
   </div>;
 }

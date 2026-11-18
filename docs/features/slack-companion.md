@@ -9,6 +9,7 @@ each agent posts at most two messages (status lines are folded into its request;
 no batch number appears before the Identification Agent finds it (the Planner Agent stage is batch-free on both screens).
 At the outcome, the Planner Agent's message links an **Incident report** (auto-opens once, 2.5 s later): the visitor's decisions and who approved each, agents' time vs the human team's 13 hrs 40 min, findings, outcome, and Sarah's hamper/voucher post on good outcomes. Phone photos are compressed copies in `companion/src/assets/`.
 The public statement and the reply to Sarah have an **✎ Edit** button on the phone: a bottom sheet whose text shows live in the laptop's draft box (Cancel restores it; the approval carries the final text). The report notes “rewritten by you”.
+Just before the report first opens, the phone asks for an optional work email (Skip is always available). It is stored on the run's `demo_sessions` row (`visitor_email`, `email_submitted_at`) via `submit_visitor_email`; nothing is emailed. Export after the event in the Supabase SQL editor: `select decider_name, visitor_email, email_submitted_at from demo_sessions where visitor_email is not null order by email_submitted_at;`
 The laptop waits for the phone at every gate (presenter override: `A`). With no Supabase env vars the demo runs laptop-only.
 
 ## Pieces

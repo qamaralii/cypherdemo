@@ -120,5 +120,13 @@ export function useCompanionSession() {
     channel.current?.send({ type: 'broadcast', event: EVENTS.action, payload: { token: token.current, action } });
   }, [status]);
 
-  return { phase, state, status, me, connected, join, send };
+  /** Optional visitor email, stored on this run's session row (only this phone's decider token can write it). */
+  const submitEmail = useCallback(async (email: string): Promise<'ok' | 'invalid' | 'error'> => {
+    if (!supabase || !sessionId || !token.current) return 'error';
+    const { data, error } = await supabase.rpc('submit_visitor_email', { p_id: sessionId, p_token: token.current, p_email: email });
+    if (error) return 'error';
+    return data === true ? 'ok' : 'invalid';
+  }, []);
+
+  return { phase, state, status, me, connected, join, send, submitEmail };
 }

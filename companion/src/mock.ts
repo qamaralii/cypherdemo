@@ -31,5 +31,6 @@ export function useMockSession() {
       return { ...next, stage, gateReady: stage !== 'outcome', seq: current.seq + 1 };
     });
   }, []);
-  return { phase: { kind: 'ready' as const }, state, status: (state.stage === 'outcome' ? 'ended' : 'live') as SessionStatus, me: 'Alex', connected: true, join: async () => {}, send };
+  const submitEmail = useCallback(async (email: string) => (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) ? 'invalid' : 'ok') as 'ok' | 'invalid' | 'error', []);
+  return { submitEmail, phase: { kind: 'ready' as const }, state, status: (state.stage === 'outcome' ? 'ended' : 'live') as SessionStatus, me: 'Alex', connected: true, join: async () => {}, send };
 }

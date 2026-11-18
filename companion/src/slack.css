@@ -229,6 +229,21 @@ button:disabled { cursor: default; }
 .sl-report-foot { margin-top: 18px; text-align: center; }
 .sl-report-foot p { color: var(--sl-muted); font-size: 13px; }
 .sl-report-foot a { display: inline-block; margin-top: 10px; color: #d2643e; font-size: 14px; font-weight: 800; text-decoration: none; }
+.sl-report-thanks { margin-top: 8px; color: var(--sl-text) !important; }
+.sl-email { justify-content: center; background: linear-gradient(180deg, #f9f4f9 0%, #fff 60%); }
+.sl-email form { display: grid; gap: 10px; width: 100%; max-width: 380px; margin: 0 auto; padding: 28px 22px calc(28px + env(safe-area-inset-bottom)); }
+.sl-email-icon { font-size: 40px; text-align: center; }
+.sl-email h1 { font-size: 24px; line-height: 1.2; text-align: center; }
+.sl-email p { color: #454245; font-size: 15px; text-align: center; }
+.sl-email label { margin-top: 8px; font-size: 14px; font-weight: 800; }
+.sl-email label small { color: var(--sl-faint); font-weight: 600; }
+.sl-email input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid #bbbabb; border-radius: 8px; font: inherit; font-size: 17px; outline: none; }
+.sl-email input:focus { border-color: var(--sl-blue); box-shadow: 0 0 0 3px rgba(18, 100, 163, .25); }
+.sl-email .sl-btn { width: 100%; }
+.sl-email .sl-decline { min-height: 40px; border-color: transparent; background: none; color: var(--sl-muted); font-weight: 700; }
+.sl-email-error { color: #b0134a !important; font-size: 13px !important; text-align: left !important; }
+.sl-email-note { color: var(--sl-faint); font-size: 12px; text-align: center; }
+
 @keyframes sl-report-up { from { transform: translateY(100%); } }
 
 @keyframes sl-in { from { opacity: 0; transform: translateY(6px); } }
