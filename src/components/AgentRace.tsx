@@ -160,6 +160,8 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     publish({
       humanStage, humanIndex: humanMessageIndex, stage: workflowStage, gateReady: isGate(workflowStage) && gateReady, feedback: approvalFeedback,
       decisionId: decision?.id ?? null, regions, channels, publicDraft, customerDraft, compensation, approvals, stayedHuman,
+      // Read at publish time (every stage change): at the outcome it is the final agent time.
+      agentMinutes: comparisonElapsedRef.current / 30_000,
     });
   }, [publish, humanStage, humanMessageIndex, workflowStage, gateReady, approvalFeedback, decision, regions, channels, publicDraft, customerDraft, compensation, approvals, stayedHuman]);
 

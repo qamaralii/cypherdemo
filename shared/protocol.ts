@@ -43,6 +43,8 @@ export interface DemoState {
   approvals: Partial<Record<GateStage, Approver>>;
   /** Visitor chose “I’ll take my chances” on the human summary: straight to the adverse outcome. */
   stayedHuman: boolean;
+  /** Simulated minutes on the laptop's agent timer (same scale as its on-screen “mins”), for the final report. */
+  agentMinutes: number;
 }
 
 export const initialDemoState: DemoState = {
@@ -62,6 +64,7 @@ export const initialDemoState: DemoState = {
   compensation: 'Hamper',
   approvals: {},
   stayedHuman: false,
+  agentMinutes: 0,
 };
 
 export type PhoneAction =

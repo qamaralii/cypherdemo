@@ -21,7 +21,7 @@ export interface Person { name: string; initials: string; color: string; app?: b
 export type Card =
   | { kind: 'alert'; handle: string; caption: string; stats: string }
   | { kind: 'result'; color: string; title: string; lines: string[] }
-  | { kind: 'outcome'; tone: 'good' | 'partial' | 'bad'; title: string; lines: string[] };
+  | { kind: 'outcome'; tone: 'good' | 'partial' | 'bad'; title: string; lines: string[]; report?: boolean };
 
 export interface Msg {
   id: string;
@@ -53,6 +53,18 @@ export interface DerivedView {
   alert: PhoneAlert | null;
   /** The “Unlock” button shown as the empty incident channel's only content, before the agents start. */
   start: { label: string; decline: string } | null;
+  /** The visitor's incident report, once the run reaches its outcome. */
+  report: IncidentReport | null;
+}
+
+export interface IncidentReport {
+  tone: 'good' | 'partial' | 'bad';
+  title: string;
+  outcome: string[];
+  findings: string[];
+  decisions: { label: string; value: string; by: string }[];
+  agentMinutes: number | null;
+  sarah: { image: 'hamper' | 'voucher'; caption: string; likes: number; comments: { handle: string; text: string; color: string }[] } | null;
 }
 
 const intugleBot: Person = { name: 'Intugle', initials: 'IN', color: '#D2643E', app: true };
@@ -86,7 +98,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
   let agentsTyping: string | null = null;
   let activeGate: GateStage | null = null;
   let alert: PhoneAlert | null = null;
-  if (state.stayedHuman) agents.push({ id: 'stayed-human', author: intugleBot, time: clock(1), text: 'The team chose to stay with the human process.', card: outcomeCard(state) });
+  if (state.stayedHuman) agents.push({ id: 'stayed-human', author: intugleBot, time: clock(1), text: 'The team chose to stay with the human process.', card: { ...outcomeCard(state), report: true } as Card });
   if (inWorkflow && state.stage && !state.stayedHuman) {
     const path = stagePath(state.decisionId);
     const current = Math.max(0, path.indexOf(state.stage));
@@ -111,7 +123,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
       }
 
       if (stage === 'outcome') {
-        post({ id: 'outcome', author: agent('orchestrator'), text: outcomeText(state, me), card: outcomeCard(state) });
+        post({ id: 'outcome', author: agent('orchestrator'), text: outcomeText(state, me), card: { ...outcomeCard(state), report: true } as Card });
         return;
       }
 
@@ -151,6 +163,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
     gates,
     activeGate,
     alert,
+    report: inWorkflow && (state.stage === 'outcome' || state.stayedHuman) ? buildReport(state, me) : null,
     start: waitingToStart && live ? { label: config.agentRace.agentPrompt.yes.replace(/\s*→\s*$/, ''), decline: config.agentRace.agentPrompt.no } : null,
   };
 }
@@ -205,4 +218,39 @@ function outcomeCard(state: DemoState): Card {
   if (state.decisionId === 'nothing' || state.stayedHuman) return { kind: 'outcome', tone: 'bad', title: 'FreshMart delists the product range', lines: ['Supplier products removed from all stores', 'Sarah’s post reached 2.1M views and is trending', 'A health-authority investigation has opened'] };
   if (state.decisionId === 'recall') return { kind: 'outcome', tone: 'partial', title: 'Stock withdrawn. Public concern remains.', lines: [`${stores} stores received withdrawal orders`, `Sarah received a direct reply and ${reward}`, 'No public statement: 3,200 new comments in 2 hours'] };
   return { kind: 'outcome', tone: 'good', title: 'Incident resolved with evidence and care', lines: [`${stores} stores received withdrawal orders`, `Public statement published on ${state.channels.length} ${state.channels.length === 1 ? 'channel' : 'channels'}`, `Sarah received a personal reply and ${reward}`, 'Meanwhile the human team, 13 hrs 40 mins in, still hasn’t confirmed the root cause'] };
+}
+
+function buildReport(state: DemoState, me: string): IncidentReport {
+  const card = outcomeCard(state) as Extract<Card, { kind: 'outcome' }>;
+  const decision = config.agentRace.decisions.find((item) => item.id === state.decisionId);
+  const stores = storesForRegions(state.regions);
+  const by = (gate: GateStage) => state.approvals[gate] === 'phone' ? `You (${me})` : state.approvals[gate] === 'presenter' ? 'Booth presenter' : 'Approved';
+  if (state.stayedHuman) {
+    return { tone: 'bad', title: card.title, outcome: card.lines, findings: [], agentMinutes: null, sarah: null,
+      decisions: [{ label: 'Agents', value: 'Not used: stayed with the human process', by: `You (${me})` }] };
+  }
+  const path = stagePath(state.decisionId);
+  const decisions: IncidentReport['decisions'] = [];
+  const add = (gate: GateStage, label: string, value: string) => { if (path.includes(gate)) decisions.push({ label, value, by: by(gate) }); };
+  add('socialMediaApproval', 'Investigation', 'Started from the Social Media Agent’s alert');
+  add('orchestratorApproval', 'Incident plan', 'Approved: identify, investigate, respond');
+  add('resolution', 'Response', decision?.title ?? '—');
+  add('recall', 'Stock withdrawal', `${stores} of 40 stores · ${state.regions.join(', ') || 'none'}`);
+  add('comms', 'Public statement', `Published on ${state.channels.join(', ')}`);
+  add('support', 'Reply to Sarah', state.compensation === 'Voucher' ? 'Sent with a £40 goodwill voucher' : 'Sent with a curated apology hamper');
+  const update = state.compensation === 'Voucher' ? config.agentRace.voucherUpdate : config.agentRace.customerUpdate;
+  const sarahGetsUpdate = state.decisionId === 'full' || state.decisionId === 'recall';
+  return {
+    // The time comparison has its own boxes in the report, so the human-team line isn't repeated here.
+    tone: card.tone, title: card.title, outcome: card.lines.filter((line) => !line.startsWith('Meanwhile the human team')),
+    findings: ['Batch HLD-2407-A, from Sarah’s photo', 'Root cause: sealing temperature 160°C → 134°C for 18 minutes on Line 4', 'Exposure: 40 FreshMart stores across 7 UK cities'],
+    decisions,
+    agentMinutes: state.agentMinutes >= 0.05 ? state.agentMinutes : null,
+    sarah: sarahGetsUpdate ? {
+      image: state.compensation === 'Voucher' ? 'voucher' : 'hamper',
+      caption: update.caption,
+      likes: update.counters.likes,
+      comments: update.comments.slice(0, 2).map((comment) => ({ handle: comment.handle, text: comment.text, color: comment.avatarColor })),
+    } : null,
+  };
 }

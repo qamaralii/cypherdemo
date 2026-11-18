@@ -8,6 +8,14 @@ export const mockStage = import.meta.env.DEV ? new URLSearchParams(location.sear
 function stateFor(target: string): DemoState {
   const base: DemoState = { ...initialDemoState, publicDraft: defaultPublicDraft, customerDraft: defaultCustomerDraft, seq: 1 };
   if (target === 'summary') return { ...base, scene: 'agentRace', humanStage: 'summary' };
+  if (target === 'outcome' || target === 'stayed') {
+    // ?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher, or ?mock=stayed
+    const params = new URLSearchParams(location.search);
+    const decisionId = (params.get('decision') ?? 'full') as DemoState['decisionId'];
+    return { ...base, scene: 'agentRace', humanStage: 'summary', stage: 'outcome', decisionId, stayedHuman: target === 'stayed',
+      regions: ['North', 'West'], channels: ['Website', 'Instagram'], compensation: params.get('comp') === 'Voucher' ? 'Voucher' : 'Hamper', agentMinutes: 1.62,
+      approvals: { socialMediaApproval: 'phone', orchestratorApproval: 'phone', resolution: 'phone', recall: 'phone', comms: 'presenter', support: 'phone' } };
+  }
   return { ...base, scene: 'agentRace', humanStage: 'summary', stage: target as WorkflowStage, gateReady: true };
 }
 

@@ -1,7 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { config } from '../../src/config';
-import { CHANNELS, derive, type Card, type ChannelId, type GateView, type Msg } from './derive';
+import { CHANNELS, derive, type Card, type ChannelId, type GateView, type IncidentReport, type Msg } from './derive';
+import hamperImg from './assets/hamper.jpg';
+import voucherImg from './assets/voucher.jpg';
 import { useCompanionSession } from './session';
 import { mockStage, useMockSession } from './mock';
 import { buzz, keepAwake, playAlarm, playKnock, unlockAudio } from './alerts';
@@ -72,6 +74,11 @@ const alertsKey = `cypher-companion:alerts:${new URLSearchParams(location.search
 function readShownAlerts(): string[] { try { return JSON.parse(localStorage.getItem(alertsKey) ?? '[]'); } catch { return []; } }
 function saveShownAlerts(ids: string[]) { try { localStorage.setItem(alertsKey, JSON.stringify(ids)); } catch { /* private mode */ } }
 
+const REPORT_DELAY_MS = 2500;
+const reportKey = `cypher-companion:report:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
+function readFlag(key: string) { try { return localStorage.getItem(key) === '1'; } catch { return false; } }
+function saveFlag(key: string) { try { localStorage.setItem(key, '1'); } catch { /* private mode */ } }
+
 type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status' | 'me' | 'connected' | 'send'>;
 
 function Workspace({ state, status, me, connected, send }: SessionApi) {
@@ -82,6 +89,16 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
   const [seen, setSeen] = useState<Record<ChannelId, number>>(() => ({ general: view.channels.general.messages.length, agents: 0 }));
   const [approving, setApproving] = useState<GateStage | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+
+  // The incident report opens by itself once per run, shortly after the outcome lands; the outcome message can reopen it.
+  const hasReport = Boolean(view.report);
+  useEffect(() => {
+    if (!hasReport) return;
+    if (readFlag(reportKey)) return;
+    const timer = window.setTimeout(() => { saveFlag(reportKey); setReportOpen(true); setDrawer(false); }, REPORT_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [hasReport]);
   const feed = useRef<HTMLDivElement>(null);
   const lastAlert = useRef<GateStage | null>(null);
   const mountedAt = useRef(Date.now());
@@ -193,7 +210,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
         <button className="sl-btn sl-decline" disabled={status !== 'live'} onClick={() => act({ type: 'stayHuman' })}>{view.start.decline}</button>
       </div>}
       {current.messages.map((msg) => <Message key={msg.id} msg={msg} me={me}>
-        {msg.card && <CardView card={msg.card} />}
+        {msg.card && <CardView card={msg.card} onReport={() => setReportOpen(true)} />}
         {msg.gate && view.gates[msg.gate] && <GateBlock gate={view.gates[msg.gate]!} state={state} approving={approving === msg.gate} act={act} />}
       </Message>)}
       {status === 'ended' && current.id !== 'general' && <p className="sl-ended">This demo run has ended. Thanks for being the human in the loop.</p>}
@@ -201,6 +218,8 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
 
     <div className="sl-typing" aria-live="polite">{current.typing ? <><span className="sl-typing-dots"><i /><i /><i /></span><b>{current.typing}</b> is typing…</> : ' '}</div>
     <footer className="sl-composer"><div>Message #{CHANNELS[current.id].name}</div><span aria-hidden="true">＋</span></footer>
+
+    {reportOpen && view.report && <ReportSheet report={view.report} me={me} onClose={() => setReportOpen(false)} />}
 
     {drawer && <div className="sl-scrim" onClick={() => setDrawer(false)} />}
     <aside className={`sl-drawer${drawer ? ' open' : ''}`} aria-hidden={!drawer}>
@@ -249,11 +268,14 @@ function rich(text: string, me: string) {
   });
 }
 
-function CardView({ card }: { card: Card }) {
+function CardView({ card, onReport }: { card: Card; onReport: () => void }) {
   switch (card.kind) {
     case 'alert': return <div className="sl-alert-card"><div className="sl-alert-head"><span className="sl-avatar tiny" style={{ background: '#8f342f' }}>S</span><b>@{card.handle}</b><em>Instagram</em></div><p>{card.caption}</p><small>{card.stats}</small></div>;
     case 'result': return <div className="sl-attach" style={{ borderColor: card.color }}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;
-    case 'outcome': return <div className={`sl-attach outcome ${card.tone}`}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;
+    case 'outcome': return <>
+      <div className={`sl-attach outcome ${card.tone}`}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>
+      {card.report && <div className="sl-actions sl-report-open"><button className="sl-btn" onClick={onReport}>📄 View your incident report</button></div>}
+    </>;
   }
 }
 
@@ -336,4 +358,62 @@ function Quote({ text }: { text: string }) {
     <p>{text}</p>
     {long && <button onClick={() => setOpen((value) => !value)}>{open ? 'Show less' : 'Show more'}</button>}
   </blockquote>;
+}
+
+/** Full-screen incident report: the visitor's takeaway from the run. */
+function ReportSheet({ report, me, onClose }: { report: IncidentReport; me: string; onClose: () => void }) {
+  return <div className="sl-report" role="dialog" aria-modal="true" aria-label="Incident report">
+    <header className="sl-report-bar">
+      <button onClick={onClose} aria-label="Close report">✕</button>
+      <strong>Incident report</strong>
+      <span />
+    </header>
+    <div className="sl-report-body">
+      <section className={`sl-report-hero ${report.tone}`}>
+        <span>{report.tone === 'good' ? 'RESOLVED' : report.tone === 'partial' ? 'PARTIALLY RESOLVED' : 'NOT RESOLVED'} · YUMMCHIPS · SARAH’S COMPLAINT</span>
+        <h1>{report.title}</h1>
+        <p>Human in the loop: <b>{me}</b></p>
+      </section>
+
+      <section className="sl-report-times">
+        <div className="agents"><small>Intugle agents</small><b>{report.agentMinutes !== null ? `${report.agentMinutes.toFixed(1)} min` : report.decisions[0]?.label === 'Agents' ? 'Not used' : '—'}</b><span>{report.findings.length ? 'Cause and exposure confirmed' : '—'}</span></div>
+        <div className="humans"><small>Human team</small><b>13 hrs 40 min</b><span>Root cause still unconfirmed</span></div>
+      </section>
+
+      <section className="sl-report-section">
+        <h2>Your decisions</h2>
+        <ol className="sl-report-decisions">
+          {report.decisions.map((item) => <li key={item.label}><b>{item.label}</b><span>{item.value}</span><small>{item.by}</small></li>)}
+        </ol>
+      </section>
+
+      {report.findings.length > 0 && <section className="sl-report-section">
+        <h2>What the agents found</h2>
+        <ul className="sl-report-list">{report.findings.map((line) => <li key={line}>{line}</li>)}</ul>
+      </section>}
+
+      <section className="sl-report-section">
+        <h2>Outcome</h2>
+        <ul className={`sl-report-list ${report.tone}`}>{report.outcome.map((line) => <li key={line}>{line}</li>)}</ul>
+      </section>
+
+      {report.sarah && <section className="sl-report-section">
+        <h2>Sarah’s update</h2>
+        <article className="sl-ig">
+          <header><span className="sl-avatar tiny" style={{ background: '#8f342f' }}>S</span><b>sarah_mitchell</b><small>just now</small></header>
+          <img src={report.sarah.image === 'voucher' ? voucherImg : hamperImg} alt={report.sarah.image === 'voucher' ? 'A £40 YummChips voucher with an apology note' : 'A YummChips apology hamper'} />
+          <div className="sl-ig-body">
+            <b>♥ {report.sarah.likes.toLocaleString('en-GB')} likes</b>
+            <p><b>sarah_mitchell</b> {report.sarah.caption}</p>
+            {report.sarah.comments.map((comment) => <p key={comment.handle} className="sl-ig-comment"><b>{comment.handle}</b> {comment.text}</p>)}
+          </div>
+        </article>
+      </section>}
+
+      <footer className="sl-report-foot">
+        <p>Every critical decision in this incident was made by a person. The agents connected the evidence and did the work.</p>
+        <a href="https://intugle.ai" target="_blank" rel="noreferrer">Built with Intugle · intugle.ai</a>
+      </footer>
+    </div>
+  </div>;
 }

@@ -7,6 +7,7 @@ When its run finishes, the Social Media Agent asks the visitor to **Start invest
 Each later approval is likewise posted by its agent and answered from the phone. The agents' channel is `#incidents`:
 each agent posts at most two messages (status lines are folded into its request; it shows as typing while it works);
 no batch number appears before the Identification Agent finds it (the Planner Agent stage is batch-free on both screens).
+At the outcome, the Planner Agent's message links an **Incident report** (auto-opens once, 2.5 s later): the visitor's decisions and who approved each, agents' time vs the human team's 13 hrs 40 min, findings, outcome, and Sarah's hamper/voucher post on good outcomes. Phone photos are compressed copies in `companion/src/assets/`.
 The laptop waits for the phone at every gate (presenter override: `A`). With no Supabase env vars the demo runs laptop-only.
 
 ## Pieces
@@ -20,7 +21,7 @@ The laptop waits for the phone at every gate (presenter override: `A`). With no 
 
 ## Run
 - Laptop demo: `npm run dev`
-- Phone app: `npm run dev:companion` (port 5174, LAN-reachable). Mock without backend: `/?mock=resolution` (also `summary`, `socialMedia`, `recall`, `comms`, `support`).
+- Phone app: `npm run dev:companion` (port 5174, LAN-reachable). Mock without backend: `/?mock=resolution` (also `summary`, `socialMedia`, `recall`, `comms`, `support`, `stayed`, and `outcome` with `&decision=full|recall|nothing&comp=Hamper|Voucher`).
 
 ## Deploy (Railway, project `passionate-smile`, service `cypherdemo`)
 Railpack serves the phone app as a static site with Caddy. Service variables:
