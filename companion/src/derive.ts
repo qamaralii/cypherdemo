@@ -52,7 +52,7 @@ export interface DerivedView {
   activeGate: GateStage | null;
   alert: PhoneAlert | null;
   /** The “Unlock” button shown as the empty incident channel's only content, before the agents start. */
-  start: { label: string } | null;
+  start: { label: string; decline: string } | null;
 }
 
 const intugleBot: Person = { name: 'Intugle', initials: 'IN', color: '#D2643E', app: true };
@@ -151,7 +151,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
     gates,
     activeGate,
     alert,
-    start: waitingToStart && live ? { label: config.agentRace.agentPrompt.yes.replace(/\s*→\s*$/, '') } : null,
+    start: waitingToStart && live ? { label: config.agentRace.agentPrompt.yes.replace(/\s*→\s*$/, ''), decline: config.agentRace.agentPrompt.no } : null,
   };
 }
 

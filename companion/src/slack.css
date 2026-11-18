@@ -68,7 +68,9 @@ button:disabled { cursor: default; }
 
 /* Empty incident channel before the agents start: just the Unlock button. */
 .sl-empty { display: grid; place-items: center; padding: 28px 20px; }
-.sl-empty .sl-btn { max-width: 360px; }
+.sl-empty { gap: 10px; }
+.sl-empty .sl-btn { width: 100%; max-width: 360px; }
+.sl-empty .sl-decline { min-height: 44px; border-color: transparent; color: var(--sl-muted); font-weight: 700; }
 
 /* ── Messages ── */
 .sl-msg { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; padding: 8px 16px; animation: sl-in .3s ease-out both; }

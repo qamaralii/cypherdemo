@@ -66,6 +66,8 @@ export const initialDemoState: DemoState = {
 
 export type PhoneAction =
   | { type: 'start' }
+  /** “I'll take my chances”: skip the agents and stay with the human process (adverse outcome). */
+  | { type: 'stayHuman' }
   | { type: 'chooseDecision'; decisionId: DecisionId }
   | { type: 'toggleRegion'; region: Region }
   | { type: 'setRegions'; regions: Region[] }

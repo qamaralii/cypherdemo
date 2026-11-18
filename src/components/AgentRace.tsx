@@ -167,6 +167,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   actionHandler.current = (action: PhoneAction) => {
     // The phone joins at the end of the human thread; its first button unleashes the agents.
     if (action.type === 'start') { if (!workflowStage && humanStage === 'summary') startWorkflow(); return; }
+    if (action.type === 'stayHuman') { if (!workflowStage && humanStage === 'summary') directNoAction(); return; }
     if (!isGate(workflowStage) || !gateReady || approvalFeedback || workflowPaused) return;
     const findDecision = (id: string) => config.agentRace.decisions.find((item) => item.id === id) ?? null;
     switch (action.type) {

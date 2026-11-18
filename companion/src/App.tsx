@@ -190,6 +190,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
       <ChannelIntro id={current.id} />
       {current.id === 'agents' && current.messages.length === 0 && view.start && <div className="sl-empty">
         <button className="sl-btn primary big" disabled={status !== 'live'} onClick={() => act({ type: 'start' })}>▶ {view.start.label}</button>
+        <button className="sl-btn sl-decline" disabled={status !== 'live'} onClick={() => act({ type: 'stayHuman' })}>{view.start.decline}</button>
       </div>}
       {current.messages.map((msg) => <Message key={msg.id} msg={msg} me={me}>
         {msg.card && <CardView card={msg.card} />}
