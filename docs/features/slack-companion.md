@@ -32,3 +32,9 @@ Railpack serves the phone app as a static site with Caddy. Service variables:
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (baked in at build time; redeploy after changing)
 
 Do not set a start command: it disables Railpack's static-site mode.
+
+The laptop demo is hosted too, as service `laptop-demo` in the same project: https://laptop-demo-production.up.railway.app
+(Railpack's default Vite static build, `npm run build` → `dist`; no RAILPACK_* variables). Its variables: `VITE_SUPABASE_URL`,
+`VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_COMPANION_URL=https://cypherdemo-production-e62872af.up.railway.app/`. It is not connected
+to GitHub; deploy it with `railway up <clean export> --path-as-root -s laptop-demo`. The phone app is service `cypherdemo`:
+https://cypherdemo-production-e62872af.up.railway.app
