@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { config } from '../config';
 import './landing-page.css';
 
+
 interface Props {
   onStart: () => void;
   onStartInteraction?: () => void;
@@ -73,7 +74,7 @@ export function OpeningScreen({ onStart, onStartInteraction }: Props) {
           <img className="landing-watermark" src={`${import.meta.env.BASE_URL}assets/intugle-icon.svg`} alt="" aria-hidden="true" />
           <div className="landing-trigger"><p className="landing-visual-label">The trigger</p><div className="landing-complaint"><span className="landing-avatar">S</span><div><small>@sarah_mitchell · just now</small><p>Just opened @YummChips. How is this okay?</p></div></div></div>
           <div className="landing-comparison"><article><p className="landing-visual-label">Human team</p><h3>4 days</h3><p>25 hand-offs · no resolution</p></article><article className="landing-agent-outcome"><p className="landing-visual-label">Agent team</p><h3>20 min</h3><p>10 domains checked · resolved</p></article></div>
-          <div className="landing-agent-chain"><p className="landing-visual-label">The chain of agents</p><div className="landing-chain-nodes">{['Social Media', 'Orchestrator', 'Identification', 'RCA', 'Response'].map((name, i) => <span className="landing-chain-pair" key={name}>{i > 0 && <span className="landing-chain-arrow" aria-hidden="true">→</span>}<span className={`landing-chain-node${i === 0 ? ' first' : ''}`}>{i === 0 && <i />}{name}</span></span>)}</div><p className="landing-story">A customer opens a bag of YummChips and finds it spoiled. Follow one complaint through two different approaches: people coordinating across teams, and AI agents connecting evidence for human-approved action.</p></div>
+          <div className="landing-agent-chain"><p className="landing-visual-label">The chain of agents</p><div className="landing-chain-nodes">{['Social Media', 'Planner', 'Identification', 'RCA', 'Response'].map((name, i) => <span className="landing-chain-pair" key={name}>{i > 0 && <span className="landing-chain-arrow" aria-hidden="true">→</span>}<span className={`landing-chain-node${i === 0 ? ' first' : ''}`}>{i === 0 && <i />}{name}</span></span>)}</div><p className="landing-story">A customer opens a bag of YummChips and finds it spoiled. Follow one complaint through two different approaches: people coordinating across teams, and AI agents connecting evidence for human-approved action.</p></div>
         </section>
       </main>
       <footer className="landing-footer"><span>Built on Intugle&apos;s agentic application platform</span><div><a href="https://intugle.ai" target="_blank" rel="noreferrer">intugle.ai</a><a href="mailto:hello@intugle.ai">hello@intugle.ai</a></div></footer>

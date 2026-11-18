@@ -7,17 +7,10 @@ import { SocialMediaAgentRun } from './SocialMediaAgentRun';
 import { RcaAgentRun, rcaTaskIndex } from './RcaAgentRun';
 import { OrchestratorGraph, ORCHESTRATOR_PLAN_STARTS } from './OrchestratorGraph';
 
-export type WorkflowStage =
-  | 'socialMedia'
-  | 'orchestrator'
-  | 'orchestratorApproval'
-  | 'identification'
-  | 'rca'
-  | 'resolution'
-  | 'recall'
-  | 'comms'
-  | 'support'
-  | 'outcome';
+import { workflowStages, regionOptions, channelOptions, orchestratorPlan, type Region, type WorkflowStage } from '../../shared/workflow';
+import { GATE_AGENT, isGate } from '../../shared/protocol';
+
+export type { WorkflowStage };
 
 export const AUTO_STAGE_DURATIONS: Partial<Record<WorkflowStage, number>> = {
   socialMedia: 19_000,
@@ -27,7 +20,6 @@ export const AUTO_STAGE_DURATIONS: Partial<Record<WorkflowStage, number>> = {
 };
 
 type Decision = typeof config.agentRace.decisions[number];
-type Region = 'North' | 'South' | 'East' | 'West' | 'Central';
 
 interface Props {
   stage: WorkflowStage;
@@ -49,26 +41,17 @@ interface Props {
   onToggleChannel: (channel: string) => void;
   onCustomerDraft: (value: string) => void;
   onCompensation: (value: 'Hamper' | 'Voucher') => void;
+  /** Name of the paired phone's decider. While set, the laptop's approval controls are locked and wait for the phone. */
+  remoteDecider?: string | null;
+  onGateReadyChange?: (ready: boolean) => void;
 }
 
-const stages: { id: WorkflowStage; name: string; summary: string; tasks: string[] }[] = [
-  { id: 'socialMedia', name: 'Social Media Agent', summary: 'Spots the complaint and gets the details needed to help.', tasks: ['Detect company tag', 'Collect contact details', 'Hand off incident'] },
-  { id: 'orchestrator', name: 'Orchestrator Agent', summary: 'Sets the investigation plan and assigns the work.', tasks: ['Set the plan', 'Connect the evidence', 'Request approval'] },
-  { id: 'identification', name: 'Identification Agent', summary: 'Finds the exact product batch involved.', tasks: ['Scan the image', 'Read the batch number', 'Match the production record'] },
-  { id: 'rca', name: 'RCA Agent', summary: 'Finds what went wrong and where the stock went.', tasks: ['Search factory logs', 'Find the anomaly', 'Map affected stores'] },
-  { id: 'resolution', name: 'Response Planning Agent', summary: 'Puts clear response choices in front of a person.', tasks: ['Collate the options', 'Summarise the risks', 'Request approval'] },
-  { id: 'recall', name: 'Recall Agent', summary: 'Tells affected stores to remove stock.', tasks: ['Draft store list', 'Confirm selected regions', 'Issue recall orders'] },
-  { id: 'comms', name: 'Public Response Agent', summary: 'Prepares a clear update for customers.', tasks: ['Draft public update', 'Select channels', 'Request approval'] },
-  { id: 'support', name: 'Customer Care Agent', summary: 'Makes things right with the customer.', tasks: ['Draft personal message', 'Choose compensation', 'Request approval'] },
-];
-
-const regions: { name: Region; stores: number }[] = [
-  { name: 'North', stores: 8 }, { name: 'South', stores: 9 }, { name: 'East', stores: 7 }, { name: 'West', stores: 10 }, { name: 'Central', stores: 6 },
-];
-const channels = ['Website', 'Instagram', 'Twitter', 'Email', 'In-store notice'];
+const stages = workflowStages;
+const regions = regionOptions;
+const channels = channelOptions;
 
 function activeStageId(stage: WorkflowStage): WorkflowStage {
-  return stage === 'orchestratorApproval' ? 'orchestrator' : stage === 'outcome' ? 'support' : stage;
+  return stage === 'socialMediaApproval' ? 'socialMedia' : stage === 'orchestratorApproval' ? 'orchestrator' : stage === 'outcome' ? 'support' : stage;
 }
 
 export function WorkflowPanel(props: Props) {
@@ -97,9 +80,14 @@ export function WorkflowPanel(props: Props) {
        ? rcaTaskIndex(visualProgress)
      : Math.min(2, Math.floor(progress * 3));
    const preparing = ['resolution', 'recall', 'comms', 'support'].includes(stage) && progress < 1;
-   const controlsPaused = paused || preparing || Boolean(approvalFeedback);
+   const remoteLocked = Boolean(props.remoteDecider) && isGate(stage);
+   const controlsPaused = paused || preparing || Boolean(approvalFeedback) || remoteLocked;
+   const gateReady = isGate(stage) && !preparing && !approvalFeedback;
+   const onGateReadyChange = props.onGateReadyChange;
+   useEffect(() => { onGateReadyChange?.(gateReady); }, [gateReady, onGateReadyChange]);
   const runColumnRef = useRef<HTMLDivElement>(null);
   const approvalAgent: Partial<Record<WorkflowStage, WorkflowStage>> = {
+    socialMediaApproval: 'socialMedia',
     orchestratorApproval: 'orchestrator',
     resolution: 'resolution',
     recall: 'recall',
@@ -151,17 +139,18 @@ export function WorkflowPanel(props: Props) {
         <aside className="workflow-right-column" aria-live="polite">
           <div className="workflow-product-window">
             <div className="workflow-product-rail"><img src="/assets/intugle-icon.svg" alt="Intugle" /><span>AI</span></div>
-            <div className="workflow-visual">
+            <div className="workflow-visual" data-remote={remoteLocked || undefined}>
               <header><span>{visualLabel(stage)}</span><small>{stage === 'outcome' ? 'AUDIT TRAIL COMPLETE' : 'LIVE WORKSPACE'}</small></header>
-              {stage === 'socialMedia' && <SocialMediaAgentRun progress={visualProgress} />}
-              {(stage === 'orchestrator' || stage === 'orchestratorApproval') && <OrchestratorVisual progress={visualProgress} ready={stage === 'orchestratorApproval'} onAdvance={() => props.onApproval('orchestratorApproval')} paused={paused || Boolean(approvalFeedback)} />}
+              {(stage === 'socialMedia' || stage === 'socialMediaApproval') && <SocialMediaVisual progress={stage === 'socialMediaApproval' ? 1 : visualProgress} ready={stage === 'socialMediaApproval'} onApprove={() => props.onApproval('socialMediaApproval')} paused={paused || remoteLocked} remoteDecider={remoteLocked ? props.remoteDecider : null} />}
+              {(stage === 'orchestrator' || stage === 'orchestratorApproval') && <OrchestratorVisual progress={visualProgress} ready={stage === 'orchestratorApproval'} onAdvance={() => props.onApproval('orchestratorApproval')} paused={paused || Boolean(approvalFeedback) || remoteLocked} />}
               {stage === 'identification' && <BatchLabelScan progress={visualProgress} />}
               {stage === 'rca' && <RcaAgentRun progress={visualProgress} />}
-              {stage === 'resolution' && <ResolutionVisual progress={progress} decision={decision} onChoose={props.onChooseDecision} onAdvance={props.onAdvance} paused={controlsPaused} />}
+              {stage === 'resolution' && <ResolutionVisual progress={progress} decision={decision} onChoose={props.onChooseDecision} onAdvance={() => props.onApproval('resolution')} paused={controlsPaused} />}
               {stage === 'recall' && <RecallVisual progress={progress} selectedRegions={selectedRegions} selectedStores={selectedStores} onToggle={props.onToggleRegion} onSetRegions={props.onSetRegions} onAdvance={() => props.onApproval('recall')} paused={controlsPaused} />}
               {stage === 'comms' && <CommsVisual progress={progress} draft={publicDraft} channels={selectedChannels} onDraft={props.onPublicDraft} onToggle={props.onToggleChannel} onAdvance={() => props.onApproval('comms')} paused={controlsPaused} />}
               {stage === 'support' && <SupportVisual progress={progress} draft={customerDraft} compensation={compensation} onDraft={props.onCustomerDraft} onCompensation={props.onCompensation} onAdvance={() => props.onApproval('support')} paused={controlsPaused} />}
               {stage === 'outcome' && <OutcomeVisual decision={decision} selectedStores={selectedStores} compensation={compensation} showCustomerUpdate={showCustomerUpdate} onViewCustomerUpdate={() => setShowCustomerUpdate(true)} onBackToOutcome={() => setShowCustomerUpdate(false)} />}
+              {remoteLocked && gateReady && stage !== 'socialMediaApproval' && <PhoneWaitBanner name={props.remoteDecider!} agent={stages.find((item) => item.id === GATE_AGENT[stage as keyof typeof GATE_AGENT])?.name ?? 'An agent'} />}
               {approvalFeedback && <ApprovalFeedback stage={approvalFeedback} regions={selectedRegions} channels={selectedChannels} compensation={compensation} />}
             </div>
           </div>
@@ -207,16 +196,20 @@ function ApprovalFeedback({ stage, regions: selectedRegions, channels, compensat
   return <div className="approval-feedback feedback-support"><span>CUSTOMER RESPONSE SENT</span><strong>Sarah&apos;s case has been updated</strong><div className="feedback-message"><b>To Sarah Mitchell</b><p>Personal response delivered · {compensation} confirmed</p></div><p>Customer care record linked to the incident.</p></div>;
 }
 
+function SocialMediaVisual({ progress, ready, onApprove, paused, remoteDecider }: { progress: number; ready: boolean; onApprove: () => void; paused: boolean; remoteDecider?: string | null }) {
+  // The approval sits in the “Investigation ready” card, so the finished run stays fully visible.
+  const action = !ready ? null : remoteDecider
+    ? <span className="sm-gate-wait" role="status"><b aria-hidden="true">📱</b>Waiting for {remoteDecider} on Slack</span>
+    : <button className="approval-action sm-gate-action" disabled={paused} onClick={onApprove}>Start investigation →</button>;
+  return <div className="sm-gate" data-ready={ready || undefined}><SocialMediaAgentRun progress={progress} action={action} /></div>;
+}
+
 function OrchestratorVisual({ progress, ready, onAdvance, paused }: Pick<Props, 'onAdvance' | 'paused'> & { progress: number; ready: boolean }) {
   const elapsedSeconds = ready ? 12.5 : progress * 12.5;
   const graphComplete = elapsedSeconds >= 8;
   const graphProgress = Math.min(1, elapsedSeconds / 8);
   const time = Math.max(0, elapsedSeconds - 8);
-  const planItems = [
-    ['Confirm the exact product batch', 'HLD-2407-A identified from Sarah’s post'],
-    ['Find the cause and affected stores', 'Check Line 4 logs and trace all deliveries'],
-    ['Prepare clear response choices', 'Withdraw stock, inform customers, and support Sarah'],
-  ] as const;
+  const planItems = orchestratorPlan;
   const visiblePlanItems = planItems.filter((_, i) => time >= ORCHESTRATOR_PLAN_STARTS[i]);
   return <div className="orchestrator-workspace"><OrchestratorGraph progress={graphProgress} ready={graphComplete} /><section className="orchestrator-plan merged-approval" style={{ visibility: graphComplete ? 'visible' : 'hidden' }} inert={!graphComplete}><ApprovalHeading title="Approve the incident plan" />{visiblePlanItems.map(([title, detail], index) => {
     const elapsed = time - ORCHESTRATOR_PLAN_STARTS[index];
@@ -278,4 +271,11 @@ function useStageProgress(stage: WorkflowStage, paused: boolean) {
     return () => cancelAnimationFrame(frame);
   }, [stage, paused]);
   return clock.stage === stage ? clock.progress : 0;
+}
+
+function PhoneWaitBanner({ name, agent }: { name: string; agent: string }) {
+  return <div className="phone-wait-banner" role="status">
+    <span className="phone-wait-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M10.5 18.5h3" /></svg></span>
+    <span><b>Waiting for {name} on Slack</b><small>{agent} sent the approval request to their phone</small></span>
+  </div>;
 }

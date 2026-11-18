@@ -9,10 +9,13 @@ import { config } from '../config';
 import type { HopTarget } from '../hooks/useSceneController';
 import './race.css';
 import './comparison.css';
+import { useCompanion } from '../companion/CompanionProvider';
+import { CompanionQr } from '../companion/CompanionQr';
+import { defaultCustomerDraft, defaultPublicDraft, type Region } from '../../shared/workflow';
+import { DRAFT_FOR_GATE, isGate, type Approver, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 type HumanStage = 'intro' | 'running' | 'summary';
 type Decision = typeof config.agentRace.decisions[number];
-type Region = 'North' | 'South' | 'East' | 'West' | 'Central';
 
 interface Props {
   paused: boolean;
@@ -21,9 +24,6 @@ interface Props {
   registerNextHandler?: (handler: (() => boolean) | null) => void;
   registerPrevHandler?: (handler: (() => boolean) | null) => void;
 }
-
-const defaultPublicDraft = 'Dear Customers,\n\nWe sincerely apologise for the concern and inconvenience caused by the quality issue affecting YummChips batch HLD-2407-A. Our investigation identified a sealing-temperature deviation during production, and we have issued withdrawal orders to the affected stores.\n\nCustomers who purchased this batch should not consume the product and should contact our customer care team for assistance. We are addressing the production issue and will provide further updates as verified information becomes available. Product quality and customer trust remain our priorities.\n\nYours sincerely,\nThe YummChips Team';
-const defaultCustomerDraft = 'Hi Sarah, thank you for bringing this to our attention. We are sorry for your experience. We have identified the affected batch, withdrawn stock, and would like to make this right for you.';
 
 export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, registerPrevHandler }: Props) {
   const [humanStage, setHumanStage] = useState<HumanStage>('intro');
@@ -40,6 +40,11 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   const [customerDraft, setCustomerDraft] = useState(defaultCustomerDraft);
   const [compensation, setCompensation] = useState<'Hamper' | 'Voucher'>('Hamper');
   const [approvalFeedback, setApprovalFeedback] = useState<WorkflowStage | null>(null);
+  const [approvals, setApprovals] = useState<Partial<Record<GateStage, Approver>>>({});
+  const [gateReady, setGateReady] = useState(false);
+  const [stayedHuman, setStayedHuman] = useState(false);
+  const companion = useCompanion();
+  const remoteDecider = companion.deciderName;
   const approvalTimeline = useRef<gsap.core.Timeline | null>(null);
   const [viewingHumanReport, setViewingHumanReport] = useState(false);
   const [comparisonElapsed, setComparisonElapsed] = useState(0);
@@ -67,12 +72,15 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     setChannels(['Website']);
     setCustomerDraft(defaultCustomerDraft);
     setCompensation('Hamper');
+    setApprovals({});
+    setStayedHuman(false);
   }, []);
 
   const advanceWorkflow = useCallback(() => {
     setWorkflowStage((current) => {
       if (!current) return current;
-      if (current === 'socialMedia') return 'orchestrator';
+      if (current === 'socialMedia') return 'socialMediaApproval';
+      if (current === 'socialMediaApproval') return 'orchestrator';
       if (current === 'orchestrator') return 'orchestratorApproval';
       if (current === 'orchestratorApproval') return 'identification';
       if (current === 'identification') return 'rca';
@@ -91,6 +99,13 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   const approveWithFeedback = useCallback((stage: WorkflowStage) => {
     setApprovalFeedback(stage);
   }, []);
+
+  /** One entry point for every approval, whether it came from the phone, the presenter override, or the laptop UI (laptop-only mode). */
+  const approveGate = useCallback((stage: GateStage, by: Approver) => {
+    setApprovals((current) => ({ ...current, [stage]: by }));
+    if (stage === 'resolution' || stage === 'socialMediaApproval') advanceWorkflow();
+    else approveWithFeedback(stage);
+  }, [advanceWorkflow, approveWithFeedback]);
 
   useEffect(() => {
     if (!approvalFeedback) return;
@@ -139,6 +154,81 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     return () => window.removeEventListener('keydown', handleEscape);
   }, [viewingHumanReport, toggleReport]);
 
+  // ── Slack companion: broadcast this screen's position to the paired phone ──
+  const { publish, onAction } = companion;
+  useEffect(() => {
+    publish({
+      humanStage, humanIndex: humanMessageIndex, stage: workflowStage, gateReady: isGate(workflowStage) && gateReady, feedback: approvalFeedback,
+      decisionId: decision?.id ?? null, regions, channels, publicDraft, customerDraft, compensation, approvals, stayedHuman,
+      // Read at publish time (every stage change): at the outcome it is the final agent time.
+      agentMinutes: comparisonElapsedRef.current / 30_000,
+    });
+  }, [publish, humanStage, humanMessageIndex, workflowStage, gateReady, approvalFeedback, decision, regions, channels, publicDraft, customerDraft, compensation, approvals, stayedHuman]);
+
+  const actionHandler = useRef<(action: PhoneAction) => void>(() => {});
+  actionHandler.current = (action: PhoneAction) => {
+    // The phone joins at the end of the human thread; its first button unleashes the agents.
+    if (action.type === 'start') { if (!workflowStage && humanStage === 'summary') startWorkflow(); return; }
+    if (action.type === 'stayHuman') { if (!workflowStage && humanStage === 'summary') directNoAction(); return; }
+    if (!isGate(workflowStage) || !gateReady || approvalFeedback || workflowPaused) return;
+    const findDecision = (id: string) => config.agentRace.decisions.find((item) => item.id === id) ?? null;
+    switch (action.type) {
+      case 'chooseDecision': if (workflowStage === 'resolution') setDecision(findDecision(action.decisionId)); return;
+      case 'toggleRegion': if (workflowStage === 'recall') toggleRegion(action.region); return;
+      case 'setRegions': if (workflowStage === 'recall') setRegions(action.regions); return;
+      case 'toggleChannel': if (workflowStage === 'comms') toggleChannel(action.channel); return;
+      case 'setCompensation': if (workflowStage === 'support') setCompensation(action.compensation); return;
+      case 'setDraft': {
+        const allowed = DRAFT_FOR_GATE[workflowStage];
+        if (!allowed || allowed.field !== action.field) return;
+        const text = action.text.slice(0, allowed.max);
+        if (action.field === 'publicDraft') setPublicDraft(text); else setCustomerDraft(text);
+        return;
+      }
+      case 'approve': {
+        if (action.stage !== workflowStage) return;
+        if (action.stage === 'resolution') {
+          const chosen = findDecision(action.decisionId ?? decision?.id ?? 'full');
+          if (!chosen) return;
+          setDecision(chosen);
+          setApprovals((current) => ({ ...current, resolution: 'phone' }));
+          setWorkflowStage(chosen.id === 'nothing' ? 'outcome' : 'recall');
+          return;
+        }
+        if (action.stage === 'recall' && action.regions) { if (!action.regions.length) return; setRegions(action.regions); }
+        if (action.stage === 'comms' && action.channels) { if (!action.channels.length) return; setChannels(action.channels); }
+        if (action.stage === 'support' && action.compensation) setCompensation(action.compensation);
+        // The approval carries the final text, so a late keystroke can never change what was approved.
+        const draftRule = DRAFT_FOR_GATE[action.stage];
+        if (draftRule && action.draft !== undefined) {
+          const text = action.draft.slice(0, draftRule.max);
+          if (!text.trim()) return;
+          if (draftRule.field === 'publicDraft') setPublicDraft(text); else setCustomerDraft(text);
+        }
+        approveGate(action.stage, 'phone');
+        return;
+      }
+    }
+  };
+  useEffect(() => onAction((action) => actionHandler.current(action)), [onAction]);
+
+  // Presenter override: “A” approves the waiting gate on the phone's behalf (phone died, visitor walked off, network dropped).
+  useEffect(() => {
+    if (!remoteDecider) return;
+    const handleOverride = (event: KeyboardEvent) => {
+      if (event.key !== 'a' && event.key !== 'A') return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (!isGate(workflowStage) || !gateReady || approvalFeedback || workflowPaused) return;
+      if (workflowStage === 'recall' && regions.length === 0) return;
+      if (workflowStage === 'comms' && (channels.length === 0 || !publicDraft.trim())) return;
+      event.preventDefault();
+      approveGate(workflowStage, 'presenter');
+    };
+    window.addEventListener('keydown', handleOverride);
+    return () => window.removeEventListener('keydown', handleOverride);
+  }, [remoteDecider, workflowStage, gateReady, approvalFeedback, workflowPaused, regions, channels, publicDraft, approveGate]);
+
   const toggleRegion = useCallback((region: Region) => {
     setRegions((current) => current.includes(region) ? current.filter((item) => item !== region) : [...current, region]);
   }, []);
@@ -158,7 +248,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       }
       return true;
     }
-    if (['orchestratorApproval', 'resolution', 'recall', 'comms', 'support', 'outcome'].includes(workflowStage)) return true;
+    if (['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'comms', 'support', 'outcome'].includes(workflowStage)) return true;
     advanceWorkflow();
     return true;
   }, [workflowStage, humanStage, humanMessageIndex, advanceWorkflow, viewingHumanReport]);
@@ -183,7 +273,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       return true;
     }
     const previous: Partial<Record<WorkflowStage, WorkflowStage>> = {
-       orchestrator: 'socialMedia', orchestratorApproval: 'orchestrator', identification: 'orchestratorApproval', rca: 'identification', resolution: 'rca', recall: 'resolution', comms: 'recall', support: decision?.id === 'full' ? 'comms' : 'recall', outcome: decision?.id === 'nothing' ? 'resolution' : 'support',
+       socialMediaApproval: 'socialMedia', orchestrator: 'socialMediaApproval', orchestratorApproval: 'orchestrator', identification: 'orchestratorApproval', rca: 'identification', resolution: 'rca', recall: 'resolution', comms: 'recall', support: decision?.id === 'full' ? 'comms' : 'recall', outcome: decision?.id === 'nothing' ? 'resolution' : 'support',
     };
     const target = previous[workflowStage];
     if (target) setWorkflowStage(target);
@@ -217,6 +307,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
 
   const directNoAction = useCallback(() => {
     setDecision(config.agentRace.decisions.find((item) => item.id === 'nothing') ?? null);
+    setStayedHuman(true);
     setWorkflowStage('outcome');
   }, []);
 
@@ -239,6 +330,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
             <span>01 / HUMAN COORDINATION</span>
             <h2>{humanStage === 'intro' ? 'Watch the handoffs multiply.' : 'A complaint becomes a chain of delays.'}</h2>
             <p>Messages, access requests and spreadsheets move between people while the customer waits for an answer.</p>
+            {humanStage === 'summary' && <CompanionQr />}
             {humanStage === 'intro' && <button data-enter-primary onClick={() => setHumanStage('running')}>Start human simulation →</button>}
           </aside>
         </div>
@@ -258,7 +350,9 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
           compensation={compensation}
           approvalFeedback={approvalFeedback}
           onAdvance={advanceWorkflow}
-          onApproval={approveWithFeedback}
+          onApproval={(stage) => { if (isGate(stage)) approveGate(stage, 'presenter'); }}
+          remoteDecider={remoteDecider}
+          onGateReadyChange={setGateReady}
           onChooseDecision={setDecision}
           onToggleRegion={toggleRegion}
           onSetRegions={setRegions}
