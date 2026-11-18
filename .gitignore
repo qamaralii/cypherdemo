@@ -2,3 +2,7 @@ node_modules/
 dist/
 audio-narration/
 dislike.svg
+.env.local
+.env*.local
+dist-companion/
+supabase/.temp/

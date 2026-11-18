@@ -6,6 +6,7 @@ import { SocialPost } from './components/SocialPost';
 import { AgentRace } from './components/AgentRace';
 import { HostControls } from './components/HostControls';
 import { config } from './config';
+import { CompanionProvider } from './companion/CompanionProvider';
 
 export default function App() {
   const {
@@ -85,6 +86,7 @@ export default function App() {
   }, [goToScene]);
 
   return (
+    <CompanionProvider scene={scene}>
     <div className="w-screen h-screen overflow-hidden bg-navy">
       <audio ref={musicRef} src={`${import.meta.env.BASE_URL}assets/music/daynigthmorning-door-to-unreality-175605.mp3`} preload="auto" loop />
       {/* ── Opening Screen ── */}
@@ -226,5 +228,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </CompanionProvider>
   );
 }

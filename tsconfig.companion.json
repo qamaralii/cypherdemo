@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.companion.tsbuildinfo"
+  },
+  "include": [
+    "companion/src",
+    "shared",
+    "src/config.ts"
+  ]
+}

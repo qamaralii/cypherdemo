@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { config } from '../config';
 import './landing-page.css';
+import { CompanionQr } from '../companion/CompanionQr';
+import { useCompanion } from '../companion/CompanionProvider';
 
 interface Props {
   onStart: () => void;
@@ -12,6 +14,11 @@ export function OpeningScreen({ onStart, onStartInteraction }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transitionCtxRef = useRef<gsap.Context | null>(null);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { onAction } = useCompanion();
+  const handleStartRef = useRef<() => void>(() => {});
+
+  // The paired phone's “Start the investigation” button starts the walkthrough.
+  useEffect(() => onAction((action) => { if (action.type === 'start') handleStartRef.current(); }), [onAction]);
 
   useEffect(() => {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -56,6 +63,8 @@ export function OpeningScreen({ onStart, onStartInteraction }: Props) {
     }, reduced ? 50 : 700);
   };
 
+  handleStartRef.current = handleStart;
+
   return (
     <div ref={containerRef} className="scene-container landing-page">
       <header className="landing-header"><img src={config.assets.logo} alt="Intugle" /><span><i />Cypher 2026</span></header>
@@ -67,6 +76,7 @@ export function OpeningScreen({ onStart, onStartInteraction }: Props) {
             <p className="landing-case-label">Use case <span>·</span> Customer experience · Consumer goods</p>
             <h2>one bad batch.<br />how far did it travel.</h2>
             <div className="landing-start-row"><button className="opening-hook landing-start" onClick={handleStart} aria-label="Start the walkthrough" autoFocus><span>Start the walkthrough</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></button><span>Takes about 4 minutes · no sign-up</span></div>
+            <CompanionQr />
           </div>
         </section>
         <section className="landing-visual" aria-label="One customer complaint, two approaches to investigation">

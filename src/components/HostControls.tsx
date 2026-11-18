@@ -8,6 +8,7 @@ const shortcuts = [
   { key: '\u2190 \u2192', action: 'Previous / Next scene' },
   { key: 'R', action: 'Replay from start' },
   { key: 'F', action: 'Toggle fullscreen' },
+  { key: 'A', action: 'Approve for the paired phone' },
   { key: '?', action: 'Toggle this help' },
   { key: 'Esc', action: 'Close help' },
   { key: '1', action: 'Human teams: start' },
