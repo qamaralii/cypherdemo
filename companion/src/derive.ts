@@ -213,8 +213,8 @@ function outcomeText(state: DemoState, me: string) {
 
 function outcomeCard(state: DemoState): Card {
   const stores = storesForRegions(state.regions) || 40;
-  const reward = state.compensation === 'Voucher' ? '£40 voucher' : 'apology hamper';
+  const reward = state.compensation === 'Voucher' ? 'a £40 voucher' : 'an apology hamper';
   if (state.decisionId === 'nothing' || state.stayedHuman) return { kind: 'outcome', tone: 'bad', title: 'FreshMart delists the product range', lines: ['Supplier products removed from all stores', 'Sarah’s post reached 2.1M views and is trending', 'A health-authority investigation has opened'] };
-  if (state.decisionId === 'recall') return { kind: 'outcome', tone: 'partial', title: 'Stock withdrawn. Public concern remains.', lines: [`${stores} stores received withdrawal orders`, `Sarah received a direct reply and a ${reward}`, 'No public statement: 3,200 new comments in 2 hours'] };
-  return { kind: 'outcome', tone: 'good', title: 'Incident resolved with evidence and care', lines: [`${stores} stores received withdrawal orders`, `Public statement published on ${state.channels.length} ${state.channels.length === 1 ? 'channel' : 'channels'}`, `Sarah received a personal reply and a ${reward}`, 'Meanwhile the human team, 13 hrs 40 mins in, still hasn’t confirmed the root cause'] };
+  if (state.decisionId === 'recall') return { kind: 'outcome', tone: 'partial', title: 'Stock withdrawn. Public concern remains.', lines: [`${stores} stores received withdrawal orders`, `Sarah received a direct reply and ${reward}`, 'No public statement: 3,200 new comments in 2 hours'] };
+  return { kind: 'outcome', tone: 'good', title: 'Incident resolved with evidence and care', lines: [`${stores} stores received withdrawal orders`, `Public statement published on ${state.channels.length} ${state.channels.length === 1 ? 'channel' : 'channels'}`, `Sarah received a personal reply and ${reward}`, 'Meanwhile the human team, 13 hrs 40 mins in, still hasn’t confirmed the root cause'] };
 }

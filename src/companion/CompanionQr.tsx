@@ -25,7 +25,7 @@ export function CompanionQr() {
     </div>;
   }
 
-  return <div className="landing-companion">
+  return <div className="landing-companion" data-join-url={joinUrl}>
     {svg ? <span className="landing-companion-qr" dangerouslySetInnerHTML={{ __html: svg }} /> : <span className="landing-companion-qr" />}
     <p><b>Be the human in the loop</b><small>Scan to join the incident channel on your phone. The agents will ask you for every approval.</small></p>
   </div>;
