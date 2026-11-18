@@ -80,6 +80,9 @@ export interface ActionEnvelope {
 
 export type SessionStatus = 'open' | 'live' | 'ended';
 
+/** The agents' Slack channel. Deliberately batch-free: the batch is only known once the Identification Agent finds it. */
+export const AGENT_CHANNEL = 'yummchips-incident';
+
 /** Realtime broadcast channel and event names. */
 export const channelName = (sessionId: string) => `demo:${sessionId}`;
 export const EVENTS = {

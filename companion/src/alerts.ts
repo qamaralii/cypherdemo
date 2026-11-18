@@ -36,8 +36,29 @@ export function playKnock() {
   } catch { /* ignore */ }
 }
 
-export function buzz() {
-  try { navigator.vibrate?.([90, 60, 90]); } catch { /* iOS Safari has no vibration API */ }
+/** Urgent incident alarm: three quick rising beeps. */
+export function playAlarm() {
+  try {
+    if (!audio) return;
+    void audio.resume();
+    const now = audio.currentTime;
+    [0, 0.16, 0.32].forEach((offset, i) => {
+      const osc = audio!.createOscillator();
+      const gain = audio!.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880 + i * 110, now + offset);
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + offset + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.12);
+      osc.connect(gain).connect(audio!.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.14);
+    });
+  } catch { /* ignore */ }
+}
+
+export function buzz(pattern: number[] = [90, 60, 90]) {
+  try { navigator.vibrate?.(pattern); } catch { /* iOS Safari has no vibration API */ }
 }
 
 /** Keeps the screen on while the demo runs. Re-acquired whenever the page becomes visible again. */

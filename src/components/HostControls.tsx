@@ -14,7 +14,7 @@ const shortcuts = [
   { key: '1', action: 'Human teams: start' },
   { key: '2', action: 'Human teams: end summary' },
   { key: '3', action: 'Social Media Agent' },
-  { key: '4', action: 'Orchestrator plan' },
+  { key: '4', action: 'Planner Agent plan' },
   { key: '5', action: 'Identification Agent' },
   { key: '6', action: 'RCA Agent' },
   { key: '7', action: 'Decision options' },

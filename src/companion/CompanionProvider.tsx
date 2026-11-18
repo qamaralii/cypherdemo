@@ -120,9 +120,9 @@ export function CompanionProvider({ scene, children }: { scene: Scene; children:
     void createSession();
   }, [scene, createSession, endSession]);
 
-  // Fallback for a missed “joined” broadcast while waiting on the opening screen.
+  // Fallback for a missed “joined” broadcast while the QR code is up (human-team summary).
   useEffect(() => {
-    if (!session || deciderName || scene !== 'opening') return;
+    if (!session || deciderName || scene !== 'agentRace') return;
     const timer = window.setInterval(() => { void refreshDecider(); }, 4000);
     return () => window.clearInterval(timer);
   }, [session, deciderName, scene, refreshDecider]);
@@ -138,6 +138,22 @@ export function CompanionProvider({ scene, children }: { scene: Scene; children:
   }, [broadcastState, persist, endSession]);
 
   useEffect(() => { publish({ scene }); }, [scene, publish, session]);
+
+  // If the laptop page reloads or closes mid-run, end the session so the phone shows “ended” instead of waiting forever.
+  // The socket and normal fetches are torn down during unload, so this uses keepalive HTTP requests.
+  useEffect(() => {
+    const onPageHide = () => {
+      const current = sessionRef.current;
+      if (!current || current.status === 'ended' || !SUPABASE_URL || !SUPABASE_KEY) return;
+      current.status = 'ended';
+      const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+      const send = (path: string, body: unknown) => { try { void fetch(`${SUPABASE_URL}${path}`, { method: 'POST', headers, body: JSON.stringify(body), keepalive: true }); } catch { /* best effort */ } };
+      send('/rest/v1/rpc/host_update_session', { p_id: current.id, p_secret: current.secret, p_state: stateRef.current, p_status: 'ended' });
+      send('/realtime/v1/api/broadcast', { messages: [{ topic: channelName(current.id), event: EVENTS.status, payload: { status: 'ended' }, private: false }] });
+    };
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, [endSession]);
 
   useEffect(() => () => {
     const current = sessionRef.current;

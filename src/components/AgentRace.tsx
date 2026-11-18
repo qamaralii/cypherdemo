@@ -10,6 +10,7 @@ import type { HopTarget } from '../hooks/useSceneController';
 import './race.css';
 import './comparison.css';
 import { useCompanion } from '../companion/CompanionProvider';
+import { CompanionQr } from '../companion/CompanionQr';
 import { defaultCustomerDraft, defaultPublicDraft, type Region } from '../../shared/workflow';
 import { isGate, type Approver, type GateStage, type PhoneAction } from '../../shared/protocol';
 
@@ -163,6 +164,8 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
 
   const actionHandler = useRef<(action: PhoneAction) => void>(() => {});
   actionHandler.current = (action: PhoneAction) => {
+    // The phone joins at the end of the human thread; its first button unleashes the agents.
+    if (action.type === 'start') { if (!workflowStage && humanStage === 'summary') startWorkflow(); return; }
     if (!isGate(workflowStage) || !gateReady || approvalFeedback || workflowPaused) return;
     const findDecision = (id: string) => config.agentRace.decisions.find((item) => item.id === id) ?? null;
     switch (action.type) {
@@ -309,6 +312,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
             <span>01 / HUMAN COORDINATION</span>
             <h2>{humanStage === 'intro' ? 'Watch the handoffs multiply.' : 'A complaint becomes a chain of delays.'}</h2>
             <p>Messages, access requests and spreadsheets move between people while the customer waits for an answer.</p>
+            {humanStage === 'summary' && <CompanionQr />}
             {humanStage === 'intro' && <button data-enter-primary onClick={() => setHumanStage('running')}>Start human simulation →</button>}
           </aside>
         </div>

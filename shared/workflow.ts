@@ -30,7 +30,7 @@ export interface AgentStage {
 
 export const workflowStages: AgentStage[] = [
   { id: 'socialMedia', name: 'Social Media Agent', summary: 'Spots the complaint and gets the details needed to help.', tasks: ['Detect company tag', 'Collect contact details', 'Hand off incident'], initials: 'SM', color: '#C7527D', update: 'New @YummChips mention from @sarah_mitchell: mould in a packet. Checking the post and collecting her contact details.' },
-  { id: 'orchestrator', name: 'Orchestrator Agent', summary: 'Sets the investigation plan and assigns the work.', tasks: ['Set the plan', 'Connect the evidence', 'Request approval'], initials: 'OR', color: '#D96239', update: 'Mapping production, quality, warehouse and sales data to draft an incident plan.' },
+  { id: 'orchestrator', name: 'Planner Agent', summary: 'Sets the investigation plan and assigns the work.', tasks: ['Set the plan', 'Connect the evidence', 'Request approval'], initials: 'PL', color: '#D96239', update: 'Mapping production, quality, warehouse and sales data to draft an incident plan.' },
   { id: 'identification', name: 'Identification Agent', summary: 'Finds the exact product batch involved.', tasks: ['Scan the image', 'Read the batch number', 'Match the production record'], initials: 'ID', color: '#597EB2', update: 'Scanning Sarah’s photo for the printed batch code.' },
   { id: 'rca', name: 'RCA Agent', summary: 'Finds what went wrong and where the stock went.', tasks: ['Search factory logs', 'Find the anomaly', 'Map affected stores'], initials: 'RC', color: '#769B58', update: 'Searching Line 4 factory logs and tracing where the cartons went.' },
   { id: 'resolution', name: 'Response Planning Agent', summary: 'Puts clear response choices in front of a person.', tasks: ['Collate the options', 'Summarise the risks', 'Request approval'], initials: 'RP', color: '#D79A3B', update: 'Collating response options and their risks.' },
@@ -51,7 +51,7 @@ export const compensationOptions: { id: Compensation; detail: string }[] = [
 ];
 
 export const orchestratorPlan = [
-  ['Confirm the exact product batch', 'HLD-2407-A identified from Sarah’s post'],
+  ['Confirm the exact product batch', 'Read the batch code from Sarah’s photo'],
   ['Find the cause and affected stores', 'Check Line 4 logs and trace all deliveries'],
   ['Prepare clear response choices', 'Withdraw stock, inform customers, and support Sarah'],
 ] as const;

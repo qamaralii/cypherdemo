@@ -4,9 +4,9 @@ import { config } from '../../src/config';
 import { CHANNELS, derive, type Card, type ChannelId, type GateView, type Msg } from './derive';
 import { useCompanionSession } from './session';
 import { mockStage, useMockSession } from './mock';
-import { buzz, keepAwake, playKnock, unlockAudio } from './alerts';
+import { buzz, keepAwake, playAlarm, playKnock, unlockAudio } from './alerts';
 import { channelOptions, compensationOptions, orchestratorPlan, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
-import type { DemoState, GateStage, PhoneAction } from '../../shared/protocol';
+import { AGENT_CHANNEL, type DemoState, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 const WORKSPACE = 'YummChips';
 
@@ -53,7 +53,7 @@ function JoinScreen({ busy, onJoin }: { busy: boolean; onJoin: (name: string) =>
     <WorkspaceIcon />
     <p className="join-eyebrow">You’ve been invited to</p>
     <h1>{WORKSPACE}</h1>
-    <p className="join-lede">Join <b>#incident-hld-2407-a</b> as the incident owner. AI agents will ask you to approve every critical decision.</p>
+    <p className="join-lede">Join <b>#{AGENT_CHANNEL}</b> as the incident owner. Intugle’s AI agents will ask you to approve every critical decision.</p>
     <form onSubmit={submit}>
       <label htmlFor="name">What should the agents call you?</label>
       <input id="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your first name (optional)" autoComplete="given-name" maxLength={32} enterKeyHint="go" />
@@ -69,37 +69,40 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   const view = useMemo(() => derive(state, me, status), [state, me, status]);
   const [active, setActive] = useState<ChannelId>('general');
   const [drawer, setDrawer] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-  const [seen, setSeen] = useState<Record<ChannelId, number>>({ general: 0, incident: 0, agents: 0 });
+  const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
+  const [seen, setSeen] = useState<Record<ChannelId, number>>({ general: 0, agents: 0 });
   const [approving, setApproving] = useState<GateStage | null>(null);
   const feed = useRef<HTMLDivElement>(null);
-  const announced = useRef<{ incident: boolean; agents: boolean }>({ incident: false, agents: false });
   const lastAlert = useRef<GateStage | null>(null);
+  const shownAlerts = useRef(new Set<string>());
 
   useEffect(() => keepAwake(), []);
 
-  // Follow the story: open the human channel when it starts, then announce the agent channel.
+  // Agent alerts arrive like a push notification: banner, alarm, vibration, then the agents channel opens.
+  const alertId = view.alert?.id;
+  const alertRef = useRef(view.alert);
+  alertRef.current = view.alert;
   useEffect(() => {
-    if (view.channels.incident.visible && !announced.current.incident) {
-      announced.current.incident = true;
-      setActive('incident');
-    }
-    if (!view.channels.incident.visible) announced.current.incident = false;
-    if (view.channels.agents.visible && !announced.current.agents) {
-      announced.current.agents = true;
-      setToast(`Orchestrator Agent added you to #${CHANNELS.agents.name}`);
-    }
-    if (!view.channels.agents.visible) {
-      announced.current.agents = false;
-      setActive((current) => current === 'agents' ? (view.channels.incident.visible ? 'incident' : 'general') : current);
-    }
-  }, [view.channels.incident.visible, view.channels.agents.visible]);
+    const incoming = alertRef.current;
+    if (!alertId || !incoming || shownAlerts.current.has(alertId)) return;
+    shownAlerts.current.add(alertId);
+    setNotice({ title: incoming.title, body: incoming.body });
+    setDrawer(false);
+    playAlarm();
+    buzz([220, 90, 220, 90, 220]);
+  }, [alertId]);
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => { setActive('agents'); setToast(null); }, 2200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+    if (!notice) return;
+    const open = window.setTimeout(() => setActive('agents'), 1200);
+    const hide = window.setTimeout(() => setNotice(null), 6000);
+    return () => { window.clearTimeout(open); window.clearTimeout(hide); };
+  }, [notice]);
+
+  // Back to #general if the laptop steps back out of the agent workflow.
+  useEffect(() => {
+    if (!view.channels.agents.visible) setActive('general');
+  }, [view.channels.agents.visible]);
 
   // Approval requests: sound, vibration, and jump to the agents channel.
   useEffect(() => {
@@ -127,7 +130,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   }, [current.id, messageCount, current.typing, view.activeGate]);
 
   const unread = (id: ChannelId) => view.channels[id].visible && id !== current.id ? Math.max(0, view.channels[id].messages.length - seen[id]) : 0;
-  const anyUnread = (['general', 'incident', 'agents'] as ChannelId[]).some((id) => unread(id) > 0);
+  const anyUnread = (['general', 'agents'] as ChannelId[]).some((id) => unread(id) > 0);
 
   const act = (action: PhoneAction) => {
     if (action.type === 'approve') setApproving(action.stage);
@@ -148,12 +151,14 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
       <span className={`sl-conn${connected ? ' on' : ''}`} title={connected ? 'Connected' : 'Reconnecting'} />
     </header>
 
-    {toast && <div className="sl-toast" role="status" onClick={() => { setActive('agents'); setToast(null); }}><b>#</b>{toast}</div>}
-    {view.bannerScene && <div className="sl-scene" role="status"><span aria-hidden="true">👀</span> Watch the big screen · {view.bannerScene}</div>}
+    {notice && <button className="sl-notice" role="alert" onClick={() => { setActive('agents'); setNotice(null); }}>
+      <span className="sl-notice-icon" aria-hidden="true">Y</span>
+      <span className="sl-notice-text"><span className="sl-notice-meta"><b>{WORKSPACE}</b> · #{AGENT_CHANNEL} · now</span><b>{notice.title}</b><span>{rich(notice.body, me)}</span></span>
+    </button>}
 
     <main ref={feed} className="sl-feed" aria-live="polite">
       <ChannelIntro id={current.id} me={me} />
-      {current.messages.map((msg) => <Message key={msg.id} msg={msg} me={current.id === 'incident' ? '\u0000' : me}>
+      {current.messages.map((msg) => <Message key={msg.id} msg={msg} me={me}>
         {msg.card && <CardView card={msg.card} onStart={() => act({ type: 'start' })} disabled={status !== 'live'} />}
         {msg.gate && view.gates[msg.gate] && <GateBlock gate={view.gates[msg.gate]!} state={state} approving={approving === msg.gate} act={act} />}
       </Message>)}
@@ -168,7 +173,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
       <header><WorkspaceIcon small /><div><strong>{WORKSPACE}</strong><small>Cypher 2026 · Intugle demo</small></div></header>
       <nav>
         <h2>Channels</h2>
-        {(['general', 'incident', 'agents'] as ChannelId[]).filter((id) => view.channels[id].visible).map((id) => <button key={id} className={`${id === current.id ? 'active' : ''}${unread(id) ? ' unread' : ''}`} onClick={() => { setActive(id); setDrawer(false); }}>
+        {(['general', 'agents'] as ChannelId[]).filter((id) => view.channels[id].visible).map((id) => <button key={id} className={`${id === current.id ? 'active' : ''}${unread(id) ? ' unread' : ''}`} onClick={() => { setActive(id); setDrawer(false); }}>
           <span># {CHANNELS[id].name}</span>{unread(id) > 0 && <em>{unread(id)}</em>}
         </button>)}
         <h2>Apps</h2>
@@ -182,17 +187,16 @@ function ChannelIntro({ id, me }: { id: ChannelId; me: string }) {
   if (id === 'agents') return <section className="sl-intro">
     <div className="sl-intro-avatars">{workflowStages.map((item) => <span key={item.id} className="sl-avatar small" style={{ background: item.color }}>{item.initials}</span>)}</div>
     <h2># {CHANNELS.agents.name}</h2>
-    <p>Orchestrator Agent created this channel for the HLD-2407-A response and added you, {me}, as the approver. Same incident, starting from Sarah’s post at 09:00.</p>
+    <p>Planner Agent created this channel for Sarah’s complaint and added you, {me}, as the approver. Same incident, starting from Sarah’s post at 09:00.</p>
   </section>;
   return <section className="sl-intro"><h2># {CHANNELS[id].name}</h2><p>This is the very beginning of the <b>#{CHANNELS[id].name}</b> channel. {CHANNELS[id].topic}.</p></section>;
 }
 
 function Message({ msg, me, children }: { msg: Msg; me: string; children?: ReactNode }) {
-  return <article className="sl-msg">
+  return <article className={`sl-msg${msg.urgent ? ' urgent' : ''}`}>
     <span className="sl-avatar" style={{ background: msg.author.color }}>{msg.author.initials}</span>
     <div className="sl-msg-body">
       <div className="sl-msg-head"><b>{msg.author.name}</b>{msg.author.app && <em>APP</em>}<time>{msg.time}</time></div>
-      {msg.author.role && <div className="sl-role">{msg.author.role}</div>}
       <p>{rich(msg.text, me)}</p>
       {children}
     </div>
@@ -211,11 +215,10 @@ function rich(text: string, me: string) {
 
 function CardView({ card, onStart, disabled }: { card: Card; onStart: () => void; disabled: boolean }) {
   switch (card.kind) {
-    case 'start': return <div className="sl-blocks"><button className="sl-btn primary big" disabled={disabled} onClick={onStart}>▶ Start the investigation</button><small className="sl-hint">The walkthrough starts on the big screen.</small></div>;
-    case 'attachment': return <div className="sl-file"><span>XLS</span><div><b>{card.title}</b><small>{card.status}</small></div></div>;
+    case 'start': return <div className="sl-blocks"><button className="sl-btn primary big" disabled={disabled} onClick={onStart}>▶ {card.label}</button><small className="sl-hint">The agents start work on the big screen.</small></div>;
+    case 'alert': return <div className="sl-alert-card"><div className="sl-alert-head"><span className="sl-avatar tiny" style={{ background: '#8f342f' }}>S</span><b>@{card.handle}</b><em>Instagram</em></div><p>{card.caption}</p><small>{card.stats}</small></div>;
     case 'result': return <div className="sl-attach" style={{ borderColor: card.color }}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;
     case 'outcome': return <div className={`sl-attach outcome ${card.tone}`}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;
-    case 'plan': return null;
   }
 }
 

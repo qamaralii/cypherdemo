@@ -5,7 +5,7 @@ const TAU = Math.PI * 2;
 const DOMAINS = [
   { name: 'Customer & Social', detail: 'Post · tag · contact', colour: '#c7527d', count: 190 },
   { name: 'Customer Care', detail: 'Sarah case · support', colour: '#b77958', count: 95 },
-  { name: 'Product & Batch', detail: 'HLD-2407-A · label', colour: '#597eb2', count: 150 },
+  { name: 'Product & Batch', detail: 'Batch codes · labels', colour: '#597eb2', count: 150 },
   { name: 'Manufacturing', detail: 'Line 4 · shift', colour: '#d79a3b', count: 135 },
   { name: 'Quality', detail: 'Seal logs · hold', colour: '#456b97', count: 110 },
   { name: 'Warehouse', detail: 'Cartons · dispatches', colour: '#ad853a', count: 125 },
@@ -161,8 +161,8 @@ export function OrchestratorGraph({ progress, ready }: { progress: number; ready
 
   useLayoutEffect(() => { drawRef.current?.(); }, [progress, ready]);
   return <div ref={rootRef} className="orchestrator-run-graph" data-ready={ready || time >= 8.3}>
-    <canvas ref={canvasRef} role="img" aria-label="Company context graph: ten dense business-domain clusters link their records into incident HLD-2407-A" />
+    <canvas ref={canvasRef} role="img" aria-label="Company context graph: ten dense business-domain clusters link their records into Sarah’s complaint" />
     <header><span>CONTEXT LINKED <b>{linked} / 10</b></span><small>{ready || time >= 8.3 ? 'Context collated' : 'Collating context across the business'}</small></header>
-    <div className="orchestrator-run-core" style={{ opacity: ease((time - .35) / .5) }}><small>ACTIVE INCIDENT</small><b>HLD-2407-A</b><span>{ready || time >= 8.3 ? 'Plan ready' : 'Collating context'}</span></div>
+    <div className="orchestrator-run-core" style={{ opacity: ease((time - .35) / .5) }}><small>ACTIVE INCIDENT</small><b>Sarah’s post</b><span>{ready || time >= 8.3 ? 'Plan ready' : 'Collating context'}</span></div>
   </div>;
 }

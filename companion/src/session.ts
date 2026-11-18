@@ -101,6 +101,18 @@ export function useCompanionSession() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [phase.kind]);
 
+  // Safety net: if every “ended” message was lost (laptop crashed, network blip), notice it within ~15 s.
+  useEffect(() => {
+    if (phase.kind !== 'ready' || status === 'ended') return;
+    const timer = window.setInterval(async () => {
+      const saved = readSaved();
+      if (!saved) return;
+      const result = await call(saved.name, saved.token);
+      if (result.ok && result.status === 'ended') setStatus('ended');
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [phase.kind, status, call]);
+
   const send = useCallback((action: PhoneAction) => {
     if (!token.current || status !== 'live') return;
     // Selections show instantly; the laptop's next broadcast confirms them.
