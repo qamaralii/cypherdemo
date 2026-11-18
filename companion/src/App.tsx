@@ -187,7 +187,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
     </button>}
 
     <main ref={feed} className="sl-feed" aria-live="polite">
-      {current.id === 'general' && <ChannelIntro id={current.id} />}
+      <ChannelIntro id={current.id} />
       {current.id === 'agents' && current.messages.length === 0 && view.start && <div className="sl-empty">
         <button className="sl-btn primary big" disabled={status !== 'live'} onClick={() => act({ type: 'start' })}>▶ {view.start.label}</button>
       </div>}
@@ -216,8 +216,16 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   </div>;
 }
 
+/** The top of a Slack channel with no history yet: name, who created it, the description, and the usual action chips. */
 function ChannelIntro({ id }: { id: ChannelId }) {
-  return <section className="sl-intro"><h2># {CHANNELS[id].name}</h2><p>This is the very beginning of the <b>#{CHANNELS[id].name}</b> channel. {CHANNELS[id].topic}.</p></section>;
+  const { name, topic } = CHANNELS[id];
+  const creator = id === 'agents' ? 'Planner Agent' : 'Intugle';
+  return <section className="sl-intro">
+    <h2><span aria-hidden="true">#</span> {name}</h2>
+    <p><b className="sl-intro-mention">@{creator}</b> created this channel today. This is the very beginning of the <b>#{name}</b> channel.</p>
+    <p className="sl-intro-desc"><span>Description</span>{topic}</p>
+    <div className="sl-intro-chips" aria-hidden="true"><span>＋ Add people</span><span>✎ Edit description</span><span>🔔 Notifications on</span></div>
+  </section>;
 }
 
 function Message({ msg, me, children }: { msg: Msg; me: string; children?: ReactNode }) {

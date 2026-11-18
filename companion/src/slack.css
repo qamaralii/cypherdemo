@@ -58,12 +58,18 @@ button:disabled { cursor: default; }
 .sl-notice-text > b { font-size: 15px; }
 
 .sl-feed { flex: 1; overflow-y: auto; padding: 8px 0 4px; -webkit-overflow-scrolling: touch; }
-.sl-intro { padding: 18px 16px 14px; }
-.sl-intro h2 { font-size: 20px; font-weight: 900; }
-.sl-intro p { margin-top: 4px; color: var(--sl-muted); font-size: 14px; }
+.sl-intro { padding: 22px 16px 14px; border-bottom: 1px solid #f0f0f0; }
+.sl-intro h2 { display: flex; align-items: center; gap: 6px; font-size: 24px; font-weight: 900; letter-spacing: -.01em; }
+.sl-intro h2 span { color: var(--sl-muted); font-weight: 700; }
+.sl-intro p { margin-top: 6px; color: #454245; font-size: 15px; }
+.sl-intro-mention { color: var(--sl-blue); font-weight: 600; }
+.sl-intro-desc { padding: 10px 12px; border: 1px solid var(--sl-border); border-radius: 8px; }
+.sl-intro-desc span { display: block; color: var(--sl-text); font-size: 13px; font-weight: 800; }
+.sl-intro-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sl-intro-chips span { padding: 6px 10px; border: 1px solid #cfcfcf; border-radius: 6px; color: var(--sl-text); font-size: 13px; font-weight: 700; }
 
 /* Empty incident channel before the agents start: just the Unlock button. */
-.sl-empty { display: grid; min-height: 100%; place-items: center; padding: 24px 20px; }
+.sl-empty { display: grid; place-items: center; padding: 28px 20px; }
 .sl-empty .sl-btn { max-width: 360px; }
 
 /* ── Messages ── */

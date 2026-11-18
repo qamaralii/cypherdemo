@@ -13,7 +13,7 @@ export type ChannelId = 'general' | 'agents';
 
 export const CHANNELS: Record<ChannelId, { name: string; topic: string }> = {
   general: { name: 'general', topic: 'Company-wide announcements' },
-  agents: { name: AGENT_CHANNEL, topic: 'Intugle agents · incident response' },
+  agents: { name: AGENT_CHANNEL, topic: 'Customer and product incidents · Intugle agents raise issues here and ask for approvals' },
 };
 
 export interface Person { name: string; initials: string; color: string; app?: boolean }
@@ -80,7 +80,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
   }];
   if (inWorkflow && state.stage !== null && !state.stayedHuman) general.push({ id: 'agents-on-it', author: intugleBot, time: clock(1), text: '🚀 Intugle’s agents are on it. Keep watching the big screen: they’ll message you here when they need you.' });
 
-  // ── #yummchips-incident: the agents ──
+  // ── #incidents: the agents ──
   const agents: Msg[] = [];
   const gates: Partial<Record<GateStage, GateView>> = {};
   let agentsTyping: string | null = null;
@@ -107,8 +107,6 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         post({ id: 'social-alert', author: agent('socialMedia'), urgent: true, text: alertText, card: { kind: 'alert', handle: post_.customerHandle, caption: post_.caption, stats: `${compact(post_.counters.likes)} dislikes · ${compact(post_.counters.comments)} comments · posted ${post_.timeAgo.toLowerCase()}` } });
         // Raised when the run completes (the Start-investigation gate is open), not while the agent is still working.
         if (state.stage === 'socialMediaApproval') alert = { id: 'social-alert', title: 'Social Media Agent', body: `🚨 @${me}, a customer post about mouldy YummChips is going viral.` };
-        post({ id: 'socialMedia-update', author: agent('socialMedia'), text: 'Checking the post and collecting Sarah’s contact details.' });
-        post({ id: 'socialMedia-result', author: agent('socialMedia'), text: 'Complaint confirmed minutes after it was posted. I’ve messaged @sarah_mitchell and collected her contact details.' });
         return;
       }
 
@@ -121,8 +119,8 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         const owner = GATE_AGENT[stage];
         const ready = isCurrent && state.gateReady;
         const processing = isCurrent && state.feedback === stage;
-        // Gates that follow their agent's own run (Social Media, Planner) don't repeat the agent's status update.
-        if (owner === stage) post({ id: `${stage}-update`, author: agent(owner), text: workflowStages.find((item) => item.id === owner)!.update });
+        // At most two messages per agent: the request (which says what the agent prepared) and, once approved, the result.
+        // While the agent prepares, the channel shows it typing instead of a separate status message.
         if (!past && !ready && !processing) { agentsTyping = agent(owner).name; return; }
         const interactive = isCurrent && ready && !processing && live;
         if (interactive) activeGate = stage;
@@ -135,6 +133,8 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         return;
       }
 
+      // The Planner's own run shows as typing only: its two messages are the plan request and the final outcome.
+      if (stage === 'orchestrator') { if (isCurrent) agentsTyping = agent(stage).name; return; }
       post({ id: `${stage}-update`, author: agent(stage), text: workflowStages.find((item) => item.id === stage)!.update });
       if (isCurrent) { agentsTyping = agent(stage).name; return; }
       const result = stageResult(stage);
@@ -165,12 +165,12 @@ function stageResult(stage: WorkflowStage): { text: string; card?: Card } | null
 
 function gatePrompt(stage: GateStage, me: string) {
   switch (stage) {
-    case 'socialMediaApproval': return `@${me}, this needs an investigation. Shall I hand it to the Planner Agent?`;
-    case 'orchestratorApproval': return `@${me}, here’s the incident plan. Approve it and I’ll put the agents to work.`;
-    case 'resolution': return `@${me}, the evidence is in. How should we respond?`;
-    case 'recall': return `@${me}, which regions should I withdraw stock from?`;
-    case 'comms': return `@${me}, please review the public statement and choose where to publish it.`;
-    case 'support': return `@${me}, here’s my reply to Sarah. Choose how we make it right.`;
+    case 'socialMediaApproval': return `Complaint confirmed: I’ve messaged @sarah_mitchell and collected her contact details. @${me}, this needs an investigation. Shall I hand it to the Planner Agent?`;
+    case 'orchestratorApproval': return `I’ve mapped production, quality, warehouse and sales data. @${me}, here’s the incident plan. Approve it and I’ll put the agents to work.`;
+    case 'resolution': return `I’ve collated the evidence and the response options. @${me}, how should we respond?`;
+    case 'recall': return `I’ve drafted the withdrawal list for the 40 affected stores. @${me}, which regions should I withdraw stock from?`;
+    case 'comms': return `I’ve drafted a public statement from the confirmed evidence. @${me}, review it and choose where to publish.`;
+    case 'support': return `I’ve drafted a personal reply to Sarah. @${me}, choose how we make it right.`;
   }
 }
 
