@@ -4,6 +4,7 @@ import { config } from '../../src/config';
 import { CHANNELS, derive, type Card, type ChannelId, type GateView, type IncidentReport, type Msg } from './derive';
 import hamperImg from './assets/hamper.jpg';
 import voucherImg from './assets/voucher.jpg';
+import intugleLogo from './assets/intugle-icon.svg';
 import { useCompanionSession } from './session';
 import { mockStage, useMockSession } from './mock';
 import { buzz, keepAwake, playAlarm, playKnock, unlockAudio } from './alerts';
@@ -246,7 +247,7 @@ function Workspace({ state, status, me, connected, send, submitEmail }: SessionA
           <span># {CHANNELS[id].name}</span>{unread(id) > 0 && <em>{unread(id)}</em>}
         </button>)}
         <h2>Apps</h2>
-        {workflowStages.map((item) => <div key={item.id} className="sl-app-row"><span className="sl-avatar tiny" style={{ background: item.color }}>{item.initials}</span>{item.name}<i className="sl-presence" /></div>)}
+        {workflowStages.map((item) => <div key={item.id} className="sl-app-row"><IntugleAvatar size="tiny" />{item.name}<i className="sl-presence" /></div>)}
       </nav>
     </aside>
   </div>;
@@ -263,9 +264,14 @@ function ChannelIntro({ id }: { id: ChannelId }) {
   </section>;
 }
 
+/** Every Intugle agent (and the Intugle bot) uses the Intugle logo as its display picture. */
+function IntugleAvatar({ size }: { size?: 'tiny' }) {
+  return <span className={`sl-avatar logo${size ? ` ${size}` : ''}`} aria-hidden="true"><img src={intugleLogo} alt="" /></span>;
+}
+
 function Message({ msg, me, children }: { msg: Msg; me: string; children?: ReactNode }) {
   return <article className={`sl-msg${msg.urgent ? ' urgent' : ''}`}>
-    <span className="sl-avatar" style={{ background: msg.author.color }}>{msg.author.initials}</span>
+    {msg.author.logo ? <IntugleAvatar /> : <span className="sl-avatar" style={{ background: msg.author.color }}>{msg.author.initials}</span>}
     <div className="sl-msg-body">
       <div className="sl-msg-head"><b>{msg.author.name}</b>{msg.author.app && <em>APP</em>}<time>{msg.time}</time></div>
       <p>{rich(msg.text, me)}</p>

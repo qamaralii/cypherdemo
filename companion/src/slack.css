@@ -77,6 +77,8 @@ button:disabled { cursor: default; }
 .sl-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 900; letter-spacing: .02em; }
 .sl-avatar.small { width: 28px; height: 28px; border-radius: 6px; font-size: 10px; }
 .sl-avatar.tiny { width: 20px; height: 20px; border-radius: 4px; font-size: 8px; }
+.sl-avatar.logo { border: 1px solid #ececec; background: #fff; }
+.sl-avatar.logo img { width: 72%; height: 72%; object-fit: contain; }
 .sl-msg-head { display: flex; align-items: baseline; gap: 6px; }
 .sl-msg-head b { font-size: 15px; font-weight: 900; }
 .sl-msg-head em { padding: 0 3px; border-radius: 3px; background: rgba(29, 28, 29, .08); color: var(--sl-muted); font-size: 10px; font-style: normal; font-weight: 700; }

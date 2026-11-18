@@ -16,7 +16,8 @@ export const CHANNELS: Record<ChannelId, { name: string; topic: string }> = {
   agents: { name: AGENT_CHANNEL, topic: 'Customer and product incidents · Intugle agents raise issues here and ask for approvals' },
 };
 
-export interface Person { name: string; initials: string; color: string; app?: boolean }
+/** `logo`: show the Intugle logo as the avatar (every agent and the Intugle bot share it). */
+export interface Person { name: string; initials: string; color: string; app?: boolean; logo?: boolean }
 
 export type Card =
   | { kind: 'alert'; handle: string; caption: string; stats: string }
@@ -67,10 +68,10 @@ export interface IncidentReport {
   sarah: { image: 'hamper' | 'voucher'; caption: string; likes: number; comments: { handle: string; text: string; color: string }[] } | null;
 }
 
-const intugleBot: Person = { name: 'Intugle', initials: 'IN', color: '#D2643E', app: true };
+const intugleBot: Person = { name: 'Intugle', initials: 'IN', color: '#D2643E', app: true, logo: true };
 const agent = (id: WorkflowStage): Person => {
   const item = workflowStages.find((entry) => entry.id === id)!;
-  return { name: item.name, initials: item.initials, color: item.color, app: true };
+  return { name: item.name, initials: item.initials, color: item.color, app: true, logo: true };
 };
 
 const clock = (minutesAfterNine: number) => {
