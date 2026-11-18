@@ -76,10 +76,11 @@ type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status
 
 function Workspace({ state, status, me, connected, send }: SessionApi) {
   const view = useMemo(() => derive(state, me, status), [state, me, status]);
-  const [active, setActive] = useState<ChannelId>('general');
+  // The phone lives in the incident channel; #general is only background.
+  const [active, setActive] = useState<ChannelId>('agents');
   const [drawer, setDrawer] = useState(false);
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
-  const [seen, setSeen] = useState<Record<ChannelId, number>>({ general: 0, agents: 0 });
+  const [seen, setSeen] = useState<Record<ChannelId, number>>(() => ({ general: view.channels.general.messages.length, agents: 0 }));
   const [approving, setApproving] = useState<GateStage | null>(null);
   const feed = useRef<HTMLDivElement>(null);
   const lastAlert = useRef<GateStage | null>(null);
@@ -109,8 +110,16 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
     return () => window.clearTimeout(timer);
   }, [alertId, shownAlerts]);
 
-  // The agents' channel stays out of sight until its alert has been delivered.
-  const channels = useMemo(() => ({ ...view.channels, agents: { ...view.channels.agents, visible: view.channels.agents.visible && !alertPending } }), [view.channels, alertPending]);
+  // Re-arm alerts when the laptop steps back before them (to the Social Media run or the human summary),
+  // so running forward again shows the banner again. A plain reload during the gate still doesn't replay it.
+  const beforeAlert = state.stage === null || state.stage === 'socialMedia';
+  useEffect(() => {
+    if (!beforeAlert || shownAlerts.length === 0) return;
+    setShownAlerts([]);
+    saveShownAlerts([]);
+  }, [beforeAlert, shownAlerts.length]);
+
+  const channels = view.channels;
 
   useEffect(() => {
     if (!notice) return;
@@ -118,11 +127,6 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
     const hide = window.setTimeout(() => setNotice(null), 6000);
     return () => { window.clearTimeout(open); window.clearTimeout(hide); };
   }, [notice]);
-
-  // Back to #general if the laptop steps back out of the agent workflow.
-  useEffect(() => {
-    if (!channels.agents.visible) setActive('general');
-  }, [channels.agents.visible]);
 
   // Approval requests: sound, vibration, and jump to the agents channel.
   useEffect(() => {
@@ -183,9 +187,12 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
     </button>}
 
     <main ref={feed} className="sl-feed" aria-live="polite">
-      <ChannelIntro id={current.id} me={me} />
+      {current.id === 'general' && <ChannelIntro id={current.id} />}
+      {current.id === 'agents' && current.messages.length === 0 && view.start && <div className="sl-empty">
+        <button className="sl-btn primary big" disabled={status !== 'live'} onClick={() => act({ type: 'start' })}>▶ {view.start.label}</button>
+      </div>}
       {current.messages.map((msg) => <Message key={msg.id} msg={msg} me={me}>
-        {msg.card && <CardView card={msg.card} onStart={() => act({ type: 'start' })} disabled={status !== 'live'} />}
+        {msg.card && <CardView card={msg.card} />}
         {msg.gate && view.gates[msg.gate] && <GateBlock gate={view.gates[msg.gate]!} state={state} approving={approving === msg.gate} act={act} />}
       </Message>)}
       {status === 'ended' && current.id !== 'general' && <p className="sl-ended">This demo run has ended. Thanks for being the human in the loop.</p>}
@@ -209,12 +216,7 @@ function Workspace({ state, status, me, connected, send }: SessionApi) {
   </div>;
 }
 
-function ChannelIntro({ id, me }: { id: ChannelId; me: string }) {
-  if (id === 'agents') return <section className="sl-intro">
-    <div className="sl-intro-avatars">{workflowStages.map((item) => <span key={item.id} className="sl-avatar small" style={{ background: item.color }}>{item.initials}</span>)}</div>
-    <h2># {CHANNELS.agents.name}</h2>
-    <p>Planner Agent created this channel for Sarah’s complaint and added you, {me}, as the approver. Same incident, starting from Sarah’s post at 09:00.</p>
-  </section>;
+function ChannelIntro({ id }: { id: ChannelId }) {
   return <section className="sl-intro"><h2># {CHANNELS[id].name}</h2><p>This is the very beginning of the <b>#{CHANNELS[id].name}</b> channel. {CHANNELS[id].topic}.</p></section>;
 }
 
@@ -239,9 +241,8 @@ function rich(text: string, me: string) {
   });
 }
 
-function CardView({ card, onStart, disabled }: { card: Card; onStart: () => void; disabled: boolean }) {
+function CardView({ card }: { card: Card }) {
   switch (card.kind) {
-    case 'start': return <div className="sl-blocks"><button className="sl-btn primary big" disabled={disabled} onClick={onStart}>▶ {card.label}</button><small className="sl-hint">The agents start work on the big screen.</small></div>;
     case 'alert': return <div className="sl-alert-card"><div className="sl-alert-head"><span className="sl-avatar tiny" style={{ background: '#8f342f' }}>S</span><b>@{card.handle}</b><em>Instagram</em></div><p>{card.caption}</p><small>{card.stats}</small></div>;
     case 'result': return <div className="sl-attach" style={{ borderColor: card.color }}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;
     case 'outcome': return <div className={`sl-attach outcome ${card.tone}`}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;

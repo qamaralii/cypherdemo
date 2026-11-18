@@ -19,7 +19,6 @@ export const CHANNELS: Record<ChannelId, { name: string; topic: string }> = {
 export interface Person { name: string; initials: string; color: string; app?: boolean }
 
 export type Card =
-  | { kind: 'start'; label: string }
   | { kind: 'alert'; handle: string; caption: string; stats: string }
   | { kind: 'result'; color: string; title: string; lines: string[] }
   | { kind: 'outcome'; tone: 'good' | 'partial' | 'bad'; title: string; lines: string[] };
@@ -52,6 +51,8 @@ export interface DerivedView {
   /** The gate waiting on this phone right now, if any. */
   activeGate: GateStage | null;
   alert: PhoneAlert | null;
+  /** The “Unlock” button shown as the empty incident channel's only content, before the agents start. */
+  start: { label: string } | null;
 }
 
 const intugleBot: Person = { name: 'Intugle', initials: 'IN', color: '#D2643E', app: true };
@@ -72,14 +73,12 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
   const inWorkflow = state.scene === 'agentRace' || state.scene === 'resolution';
   const waitingToStart = inWorkflow && state.stage === null && state.humanStage === 'summary' && !state.stayedHuman;
 
-  // ── #general: welcome, then the button that unleashes the agents ──
+  // ── #general: the welcome. The phone opens in the incident channel, so this is background only. ──
   const general: Msg[] = [{
     id: 'welcome', author: intugleBot, time: clock(0),
     text: `Welcome, @${me}! The human team has spent 13 hrs 40 mins on this incident and still can’t confirm the cause. Let’s give the same incident to Intugle’s agents. You’re the human in the loop: they’ll ask you for every critical decision.`,
   }];
-  if (waitingToStart && live) general.push({ id: 'start', author: intugleBot, time: clock(0), text: 'Ready when you are.', card: { kind: 'start', label: config.agentRace.agentPrompt.yes.replace(/\s*→\s*$/, '') } });
   if (inWorkflow && state.stage !== null && !state.stayedHuman) general.push({ id: 'agents-on-it', author: intugleBot, time: clock(1), text: '🚀 Intugle’s agents are on it. Keep watching the big screen: they’ll message you here when they need you.' });
-  if (state.stayedHuman) general.push({ id: 'stayed-human', author: intugleBot, time: clock(1), text: 'The team chose to stay with the human process.', card: outcomeCard(state) });
 
   // ── #yummchips-incident: the agents ──
   const agents: Msg[] = [];
@@ -87,6 +86,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
   let agentsTyping: string | null = null;
   let activeGate: GateStage | null = null;
   let alert: PhoneAlert | null = null;
+  if (state.stayedHuman) agents.push({ id: 'stayed-human', author: intugleBot, time: clock(1), text: 'The team chose to stay with the human process.', card: outcomeCard(state) });
   if (inWorkflow && state.stage && !state.stayedHuman) {
     const path = stagePath(state.decisionId);
     const current = Math.max(0, path.indexOf(state.stage));
@@ -145,11 +145,13 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
   return {
     channels: {
       general: { id: 'general', visible: true, messages: general, typing: null },
-      agents: { id: 'agents', visible: inWorkflow && state.stage !== null && state.stage !== 'socialMedia' && !state.stayedHuman, messages: agents, typing: agentsTyping },
+      // The incident channel is where the phone lives; it stays empty until the Social Media Agent's alert arrives.
+      agents: { id: 'agents', visible: true, messages: agents, typing: agentsTyping },
     },
     gates,
     activeGate,
     alert,
+    start: waitingToStart && live ? { label: config.agentRace.agentPrompt.yes.replace(/\s*→\s*$/, '') } : null,
   };
 }
 
