@@ -79,13 +79,15 @@ function saveShownAlerts(ids: string[]) { try { localStorage.setItem(alertsKey, 
 
 const REPORT_DELAY_MS = 2500;
 const reportKey = `cypher-companion:report:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
-const emailKey = `cypher-companion:email-step:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
+/** Pre-filled country code for the WhatsApp step (the booth is in India); visitors can change it or type +code themselves. */
+const DEFAULT_COUNTRY_CODE = '+91';
+const contactKey = `cypher-companion:whatsapp-step:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
 function readFlag(key: string) { try { return localStorage.getItem(key) === '1'; } catch { return false; } }
 function saveFlag(key: string) { try { localStorage.setItem(key, '1'); } catch { /* private mode */ } }
 
-type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status' | 'me' | 'connected' | 'send' | 'submitEmail'>;
+type SessionApi = Pick<ReturnType<typeof useCompanionSession>, 'state' | 'status' | 'me' | 'connected' | 'send' | 'submitWhatsapp'>;
 
-function Workspace({ state, status, me, connected, send, submitEmail }: SessionApi) {
+function Workspace({ state, status, me, connected, send, submitWhatsapp }: SessionApi) {
   const view = useMemo(() => derive(state, me, status), [state, me, status]);
   // The phone lives in the incident channel; #general is only background.
   const [active, setActive] = useState<ChannelId>('agents');
@@ -94,18 +96,18 @@ function Workspace({ state, status, me, connected, send, submitEmail }: SessionA
   const [seen, setSeen] = useState<Record<ChannelId, number>>(() => ({ general: view.channels.general.messages.length, agents: 0 }));
   const [approving, setApproving] = useState<GateStage | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
-  // Optional email step shown once, just before the report first opens.
-  const [emailStep, setEmailStep] = useState(false);
-  const [savedEmail, setSavedEmail] = useState<string | null>(null);
+  // Optional WhatsApp step shown once, just before the report first opens.
+  const [contactStep, setContactStep] = useState(false);
+  const [savedNumber, setSavedNumber] = useState<string | null>(null);
   const openReport = () => {
     setDrawer(false);
-    if (readFlag(emailKey)) setReportOpen(true);
-    else setEmailStep(true);
+    if (readFlag(contactKey)) setReportOpen(true);
+    else setContactStep(true);
   };
-  const finishEmail = (email: string | null) => {
-    saveFlag(emailKey);
-    if (email) setSavedEmail(email);
-    setEmailStep(false);
+  const finishContact = (number: string | null) => {
+    saveFlag(contactKey);
+    if (number) setSavedNumber(number);
+    setContactStep(false);
     setReportOpen(true);
   };
 
@@ -244,8 +246,8 @@ function Workspace({ state, status, me, connected, send, submitEmail }: SessionA
     <div className="sl-typing" aria-live="polite">{current.typing ? <><span className="sl-typing-dots"><i /><i /><i /></span><b>{current.typing}</b> is typing…</> : ' '}</div>
     <footer className="sl-composer"><div>Message #{CHANNELS[current.id].name}</div><span aria-hidden="true">＋</span></footer>
 
-    {emailStep && view.report && <EmailStep me={me} submit={submitEmail} onDone={finishEmail} />}
-    {reportOpen && view.report && <ReportSheet report={view.report} me={me} email={savedEmail} onClose={() => setReportOpen(false)} />}
+    {contactStep && view.report && <WhatsappStep me={me} submit={submitWhatsapp} onDone={finishContact} />}
+    {reportOpen && view.report && <ReportSheet report={view.report} me={me} whatsapp={savedNumber} onClose={() => setReportOpen(false)} />}
 
     {drawer && <div className="sl-scrim" onClick={() => setDrawer(false)} />}
     <aside className={`sl-drawer${drawer ? ' open' : ''}`} aria-hidden={!drawer}>
@@ -454,7 +456,7 @@ function DraftEditor({ title, initial, max, onLive, onCancel, onDone }: { title:
 }
 
 /** Full-screen incident report: the visitor's takeaway from the run. */
-function ReportSheet({ report, me, email, onClose }: { report: IncidentReport; me: string; email: string | null; onClose: () => void }) {
+function ReportSheet({ report, me, whatsapp, onClose }: { report: IncidentReport; me: string; whatsapp: string | null; onClose: () => void }) {
   return <div className="sl-report" role="dialog" aria-modal="true" aria-label="Incident report">
     <header className="sl-report-bar">
       <button onClick={onClose} aria-label="Close report">✕</button>
@@ -505,40 +507,47 @@ function ReportSheet({ report, me, email, onClose }: { report: IncidentReport; m
 
       <footer className="sl-report-foot">
         <p>Every critical decision in this incident was made by a person. The agents connected the evidence and did the work.</p>
-        {email && <p className="sl-report-thanks">Thanks, {me}. The Intugle team will be in touch at <b>{email}</b>.</p>}
+        {whatsapp && <p className="sl-report-thanks">Thanks, {me}. The Intugle team will message you on WhatsApp at <b>{whatsapp}</b>.</p>}
         <a href="https://intugle.ai" target="_blank" rel="noreferrer">Built with Intugle · intugle.ai</a>
       </footer>
     </div>
   </div>;
 }
 
-/** Optional work email, asked once just before the report. Stored in Supabase; nothing is sent to the visitor. */
-function EmailStep({ me, submit, onDone }: { me: string; submit: (email: string) => Promise<'ok' | 'invalid' | 'error'>; onDone: (email: string | null) => void }) {
-  const [email, setEmail] = useState('');
+/** Optional WhatsApp number, asked once just before the report. Stored in Supabase; nothing is sent automatically. */
+function WhatsappStep({ me, submit, onDone }: { me: string; submit: (number: string) => Promise<'ok' | 'invalid' | 'error'>; onDone: (number: string | null) => void }) {
+  const [code, setCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [number, setNumber] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    const value = email.trim();
-    if (!value) { onDone(null); return; }
+    const local = number.replace(/[\s().-]/g, '');
+    if (!local) { onDone(null); return; }
+    // A number typed with its own +country code wins over the code box; a leading 0 (trunk prefix) is dropped.
+    const full = local.startsWith('+') ? local : `+${code.replace(/\D/g, '')}${local.replace(/^0+/, '')}`;
+    if (!/^\+[1-9][0-9]{7,14}$/.test(full)) { setProblem('That doesn’t look like a WhatsApp number. Check the country code and number.'); return; }
     setBusy(true);
     setProblem(null);
-    const result = await submit(value);
+    const result = await submit(full);
     setBusy(false);
-    if (result === 'ok') onDone(value.toLowerCase());
-    else setProblem(result === 'invalid' ? 'That doesn’t look like an email address.' : 'Couldn’t save that just now. You can skip and still see your report.');
+    if (result === 'ok') onDone(full);
+    else setProblem(result === 'invalid' ? 'That doesn’t look like a WhatsApp number. Check the country code and number.' : 'Couldn’t save that just now. You can skip and still see your report.');
   };
   return <div className="sl-report sl-email" role="dialog" aria-modal="true" aria-label="Stay in touch">
     <form onSubmit={save} noValidate>
-      <span className="sl-email-icon" aria-hidden="true">📄</span>
+      <span className="sl-email-icon wa" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3Z" /></svg></span>
       <h1>Your incident report is ready</h1>
-      <p>Nice work, {me}. Want to talk about agents like these for your team? Leave your work email and the Intugle team will get in touch.</p>
-      <label htmlFor="visitor-email">Work email <small>(optional)</small></label>
-      <input id="visitor-email" type="email" inputMode="email" autoComplete="email" enterKeyHint="done" placeholder="you@company.com" maxLength={254} value={email} onChange={(event) => { setEmail(event.target.value); setProblem(null); }} />
+      <p>Nice work, {me}. Want to talk about agents like these for your team? Leave your WhatsApp number and the Intugle team will get in touch.</p>
+      <label htmlFor="visitor-whatsapp">WhatsApp number <small>(optional)</small></label>
+      <div className="sl-phone-row">
+        <input aria-label="Country code" className="sl-cc" type="tel" inputMode="tel" autoComplete="tel-country-code" maxLength={5} value={code} onChange={(event) => { setCode(`+${event.target.value.replace(/\D/g, '').slice(0, 4)}`); setProblem(null); }} />
+        <input id="visitor-whatsapp" type="tel" inputMode="tel" autoComplete="tel-national" enterKeyHint="done" placeholder="98765 43210" maxLength={20} value={number} onChange={(event) => { setNumber(event.target.value); setProblem(null); }} />
+      </div>
       {problem && <p className="sl-email-error" role="alert">{problem}</p>}
-      <button type="submit" className="sl-btn primary big" disabled={busy}>{busy ? 'Saving…' : email.trim() ? 'Continue to report' : 'See my report'}</button>
+      <button type="submit" className="sl-btn primary big" disabled={busy}>{busy ? 'Saving…' : number.trim() ? 'Continue to report' : 'See my report'}</button>
       <button type="button" className="sl-btn sl-decline" disabled={busy} onClick={() => onDone(null)}>Skip</button>
-      <small className="sl-email-note">We’ll only use this to contact you about Intugle. We won’t email you the report or add you to a newsletter.</small>
+      <small className="sl-email-note">We’ll only use this to contact you about Intugle. We won’t add you to groups or broadcast lists.</small>
     </form>
   </div>;
 }

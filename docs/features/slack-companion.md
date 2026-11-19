@@ -21,7 +21,7 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 6. Each later agent: "typing…" while it works, then its request with Block-Kit-style controls, then (after approval) its result. **At most two messages per agent.**
    - **Agent graphics** mirror the laptop visual inside the existing messages (no extra messages): Sarah's photo in the Social Media alert card, the cropped printed batch label (`BATCH NO: HLD-2407-A`) under the Identification result, and a dark "Factory log search" window with the two red anomaly rows (134°C, 136°C) under the RCA result. Photos open full screen on tap. The Planner and later agents have no graphic.
 7. Gates on the phone: Start investigation, Approve plan, response choice (3 radios), recall regions (checkboxes + Select all), reply to Sarah (✎ Edit + Hamper/Voucher). Selections mirror live on the laptop. There is no public-statement gate (removed 2026-11-19).
-8. **Outcome:** Planner Agent posts the outcome card with **📄 View your incident report**. 2.5 s later an **optional work-email step** appears (Skip always available), then the **incident report** sheet.
+8. **Outcome:** Planner Agent posts the outcome card with **📄 View your incident report**. 2.5 s later an **optional WhatsApp-number step** (country code pre-filled `+91`, editable; a number typed with its own `+code` wins; a leading 0 is dropped; stored as E.164) appears (Skip always available), then the **incident report** sheet.
 9. The session freezes at the outcome; the phone keeps its final channel and report. Replay (`R`) on the laptop creates a new session and QR.
 
 ### Laptop behaviour while a phone is paired
@@ -41,12 +41,12 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 | `src/components/AgentRace.tsx` | Publishes position (`publish(...)`), applies `PhoneAction`s, `approveGate()`, `A` override, `start`/`stayHuman`. |
 | `src/components/WorkflowPanel.tsx` | `remoteDecider` lock, `onGateReadyChange`, phone-wait banner, `SocialMediaVisual` with the Start-investigation action. |
 | `companion/src/derive.ts` | Pure `DemoState → channels/messages/gates/alert/start/report`. The phone keeps no story state of its own. |
-| `companion/src/App.tsx` | Join screen, Slack shell, gates (Block-Kit style), notification banner, Edit sheet, email step, report sheet, Intugle-logo avatars. |
-| `companion/src/session.ts` | Join/resume via RPC, Realtime subscription, `send`, `submitEmail`, 15 s ended-status safety poll. |
+| `companion/src/App.tsx` | Join screen, Slack shell, gates (Block-Kit style), notification banner, Edit sheet, WhatsApp step, report sheet, Intugle-logo avatars. |
+| `companion/src/session.ts` | Join/resume via RPC, Realtime subscription, `send`, `submitWhatsapp`, 15 s ended-status safety poll. |
 | `companion/src/alerts.ts` | Knock (approvals) and alarm (incident alert) via Web Audio, vibration, Screen Wake Lock. |
 | `companion/src/mock.ts` | Dev-only `?mock=` driver (no laptop/Supabase). |
 | `companion/src/assets/` | Compressed hamper/voucher JPEGs (~100 KB), Sarah's photo (`sarah-post.jpg`, 720 px, 88 KB), the batch-label crop (`batch-label.jpg`, region 1030,440 224×140 of `public/assets/social-post.png`), and the Intugle logo SVG. The RCA log rows come from `rcaLogExcerpt` in `shared/workflow.ts`. |
-| `supabase/migrations/` | `demo_sessions` table + RPCs; visitor email columns. |
+| `supabase/migrations/` | `demo_sessions` table + RPCs; visitor contact columns (`20261119120000_visitor_whatsapp.sql` must be run in the SQL editor). |
 | `vite.companion.config.ts`, `tsconfig.companion.json` | Phone app build (root `companion/`, env from repo root, own Vite cache `node_modules/.vite-companion`). |
 
 ## Data Model / Persistence
@@ -59,13 +59,14 @@ Table `public.demo_sessions` (one row per demo run). Table is closed to `anon`; 
 | `decider_token` / `decider_name` | Set when the first phone joins; later scanners get `taken`. |
 | `state` jsonb | Latest `DemoState` (for reconnects / reloads). |
 | `status` | `open` → `live` (phone joined) → `ended` (outcome, replay or laptop unload). Ended is sticky. |
-| `visitor_email`, `email_submitted_at` | Optional email from the phone's email step (lowercased). |
+| `visitor_whatsapp`, `whatsapp_submitted_at` | Optional WhatsApp number from the phone's contact step (E.164, e.g. `+919876543210`). |
+| `visitor_email`, `email_submitted_at` | Legacy (email step replaced 2026-11-19); kept so earlier entries survive. |
 
-RPCs: `create_demo_session()`, `host_update_session(id, secret, state, status)`, `host_get_session(id, secret)`, `join_demo_session(id, name, token?)`, `submit_visitor_email(id, token, email)` (returns false for wrong token / invalid email; empty clears).
+RPCs: `create_demo_session()`, `host_update_session(id, secret, state, status)`, `host_get_session(id, secret)`, `join_demo_session(id, name, token?)`, `submit_visitor_whatsapp(id, token, number)` (validates `^\+[1-9][0-9]{7,14}$` after stripping spaces/dashes/dots/brackets; legacy `submit_visitor_email` unused) (returns false for wrong token / invalid email; empty clears).
 
-Export emails after the event (Supabase SQL editor):
+Export WhatsApp numbers after the event (Supabase SQL editor):
 ```sql
-select decider_name, visitor_email, email_submitted_at from demo_sessions where visitor_email is not null order by email_submitted_at;
+select decider_name, visitor_whatsapp, whatsapp_submitted_at from demo_sessions where visitor_whatsapp is not null order by whatsapp_submitted_at;
 ```
 
 ## API or Interface Contract
@@ -110,7 +111,8 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 
 ## Known Gaps and Follow-Up Work
 - [ ] Real-phone rehearsal (iPhone + Android over mobile data).
-- [ ] Move Supabase to an Intugle-owned project before collecting real emails; add a privacy-policy link on the email step.
+- [ ] Move Supabase to an Intugle-owned project before collecting real numbers; add a privacy-policy link on the WhatsApp step.
+- [ ] Run `supabase/migrations/20261119120000_visitor_whatsapp.sql` in the Supabase SQL editor (until then the phone shows "Couldn’t save that just now" and visitors can only skip).
 - [ ] Railway service `cypherdemo` still auto-deploys from `main` (would fail: no `build:companion` on `main`). Switch Source → Branch to `feature/slack-companion`, or merge.
 - [ ] Trademark sign-off for the Slack look; confirm whether Intugle agents really integrate with Slack.
 - [ ] Social Media Agent visual overflows ~60 px at 1440×810 (fits at 1920×1080).
@@ -120,6 +122,7 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 - [2026-11-18 — Slack companion build](../sessions/2026-11-18-slack-companion.md)
 - [2026-11-19 — Agent graphics on the phone](../sessions/2026-11-19-companion-agent-graphics.md)
 - [2026-11-19 — Critical alert and no public statement](../sessions/2026-11-19-critical-alert-and-no-statement.md)
+- [2026-11-19 — WhatsApp number instead of email](../sessions/2026-11-19-whatsapp-contact.md)
 
 ## Related Documentation
 - Decision record: [Slack companion architecture](../decisions/slack-companion-architecture.md)

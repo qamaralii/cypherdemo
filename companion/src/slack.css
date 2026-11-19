@@ -294,3 +294,8 @@ button:disabled { cursor: default; }
 .sl-factory-row.anomaly > * { color: #ff8278; }
 .sl-factory-row:not(.anomaly) { opacity: .55; }
 .sl-alert-card .sl-media figcaption { display: none; }
+
+/* WhatsApp contact step */
+.sl-email-icon.wa { display: grid; place-items: center; justify-self: center; width: 56px; height: 56px; border-radius: 50%; color: #fff; background: #25d366; }
+.sl-phone-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; }
+.sl-phone-row .sl-cc { text-align: center; }

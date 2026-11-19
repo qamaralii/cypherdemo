@@ -18,3 +18,4 @@
 - [2026-11-18 — Slack companion build](sessions/2026-11-18-slack-companion.md)
 - [2026-11-19 — Agent graphics on the phone](sessions/2026-11-19-companion-agent-graphics.md)
 - [2026-11-19 — Critical alert and no public statement](sessions/2026-11-19-critical-alert-and-no-statement.md)
+- [2026-11-19 — WhatsApp number instead of email](sessions/2026-11-19-whatsapp-contact.md)

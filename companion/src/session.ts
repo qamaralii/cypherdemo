@@ -120,13 +120,13 @@ export function useCompanionSession() {
     channel.current?.send({ type: 'broadcast', event: EVENTS.action, payload: { token: token.current, action } });
   }, [status]);
 
-  /** Optional visitor email, stored on this run's session row (only this phone's decider token can write it). */
-  const submitEmail = useCallback(async (email: string): Promise<'ok' | 'invalid' | 'error'> => {
+  /** Optional WhatsApp number (E.164), stored on this run's session row (only this phone's decider token can write it). */
+  const submitWhatsapp = useCallback(async (number: string): Promise<'ok' | 'invalid' | 'error'> => {
     if (!supabase || !sessionId || !token.current) return 'error';
-    const { data, error } = await supabase.rpc('submit_visitor_email', { p_id: sessionId, p_token: token.current, p_email: email });
+    const { data, error } = await supabase.rpc('submit_visitor_whatsapp', { p_id: sessionId, p_token: token.current, p_number: number });
     if (error) return 'error';
     return data === true ? 'ok' : 'invalid';
   }, []);
 
-  return { phase, state, status, me, connected, join, send, submitEmail };
+  return { phase, state, status, me, connected, join, send, submitWhatsapp };
 }

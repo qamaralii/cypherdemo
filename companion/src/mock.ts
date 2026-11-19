@@ -3,6 +3,8 @@ import { useCallback, useState } from 'react';
 import { applySelection, initialDemoState, stagePath, type DemoState, type PhoneAction, type SessionStatus } from '../../shared/protocol';
 import { defaultCustomerDraft, type WorkflowStage } from '../../shared/workflow';
 
+const E164 = /^\+[1-9][0-9]{7,14}$/;
+
 export const mockStage = import.meta.env.DEV ? new URLSearchParams(location.search).get('mock') : null;
 
 function stateFor(target: string): DemoState {
@@ -31,6 +33,6 @@ export function useMockSession() {
       return { ...next, stage, gateReady: stage !== 'outcome', seq: current.seq + 1 };
     });
   }, []);
-  const submitEmail = useCallback(async (email: string) => (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()) ? 'invalid' : 'ok') as 'ok' | 'invalid' | 'error', []);
-  return { submitEmail, phase: { kind: 'ready' as const }, state, status: (state.stage === 'outcome' ? 'ended' : 'live') as SessionStatus, me: 'Alex', connected: true, join: async () => {}, send };
+  const submitWhatsapp = useCallback(async (number: string) => (number && !E164.test(number) ? 'invalid' : 'ok') as 'ok' | 'invalid' | 'error', []);
+  return { submitWhatsapp, phase: { kind: 'ready' as const }, state, status: (state.stage === 'outcome' ? 'ended' : 'live') as SessionStatus, me: 'Alex', connected: true, join: async () => {}, send };
 }

@@ -19,7 +19,7 @@ Session: [2026-11-18 — Slack companion build](../sessions/2026-11-18-slack-com
 | 11 | Agents' channel `#incidents`, fresh-channel intro, no history; at most two messages per agent; Intugle logo as every agent's avatar (no per-agent colour). | Avoid crowding a small screen; branding; natural Slack feel. | Busy per-step messages, threads, coloured initials. |
 | 12 | Incident alert only after the Social Media run completes, with a settle delay; a "Start investigation" HITL gate follows it. | The notification should mark the moment the problem is confirmed, not interrupt the start. | Alert on agent start. |
 | 13 | No batch number before the Identification Agent finds it (Planner stage, channel, title and graph labels neutral). | Story integrity: the planner can't know findings yet. | — |
-| 14 | Optional email stored in Supabase; nothing is emailed. | Lead capture without email infrastructure (DNS/provider). | Emailing the report (dropped). |
+| 14 | Optional contact stored in Supabase; nothing is sent automatically. Email at first, **swapped for a WhatsApp number on 2026-11-19** (user request). | Lead capture without messaging infrastructure. | Emailing the report (dropped); email field (replaced). |
 | 15 | Tier 2 scope: final report and draft editing kept; `#social-mentions` and agent threads dropped. | `#social-mentions` no longer fits once the phone joins late; threads conflict with the two-message cap. | — |
 
 Security notes: the table is closed to `anon`; the laptop proves itself with `host_secret`, the phone with `decider_token`; actions with the wrong token are ignored by the laptop; session ids are unguessable UUIDs. Realtime channels are public broadcast (acceptable for a booth demo; nothing sensitive is broadcast).
