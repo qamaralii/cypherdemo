@@ -95,7 +95,7 @@ Full table with rationale and rejected alternatives: [Slack companion architectu
 ## Outstanding Items
 - [ ] Real-phone rehearsal on iPhone + Android over mobile data (alarm, vibration, wake lock, Edit sheet with the on-screen keyboard).
 - [ ] Switch Railway service `cypherdemo` auto-deploy branch from `main` to `feature/slack-companion` (or merge the branch).
-- [ ] Move Supabase to an Intugle-owned project before real email collection; add privacy-policy link on the email step; delete the test row `booth-test@example.com`.
+- [ ] Move Supabase to an Intugle-owned project before real email collection; add privacy-policy link on the email step; delete the test rows `booth-test@example.com` and WhatsApp `+447700900123` (name BoothTest, a fictional UK number).
 - [ ] Trademark sign-off for the Slack look; confirm the "works in Slack" claim.
 - [ ] Optional: tighten the Social Media Agent visual for 1440×810 screens (~60 px overflow).
 

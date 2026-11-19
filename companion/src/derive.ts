@@ -7,7 +7,7 @@
 
 import { config } from '../../src/config';
 import { AGENT_CHANNEL, GATE_AGENT, isGate, stagePath, type DemoState, type GateStage, type SessionStatus } from '../../shared/protocol';
-import { defaultCustomerDraft, defaultPublicDraft, storesForRegions, workflowStages, type WorkflowStage } from '../../shared/workflow';
+import { defaultCustomerDraft, storesForRegions, workflowStages, type WorkflowStage } from '../../shared/workflow';
 
 export type ChannelId = 'general' | 'agents';
 
@@ -19,9 +19,12 @@ export const CHANNELS: Record<ChannelId, { name: string; topic: string }> = {
 /** `logo`: show the Intugle logo as the avatar (every agent and the Intugle bot share it). */
 export interface Person { name: string; initials: string; color: string; app?: boolean; logo?: boolean }
 
+/** Picture shown with an agent's result, mirroring the graphic on the laptop for that agent. */
+export type Media = 'sarahPhoto' | 'batchLabel' | 'factoryLog';
+
 export type Card =
-  | { kind: 'alert'; handle: string; caption: string; stats: string }
-  | { kind: 'result'; color: string; title: string; lines: string[] }
+  | { kind: 'alert'; handle: string; caption: string; stats: string; media?: Media }
+  | { kind: 'result'; color: string; title: string; lines: string[]; media?: Media }
   | { kind: 'outcome'; tone: 'good' | 'partial' | 'bad'; title: string; lines: string[]; report?: boolean };
 
 export interface Msg {
@@ -117,7 +120,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         if (isCurrent) return;
         const post_ = config.socialPost;
         const alertText = `🚨 @${me}, something’s wrong. A customer post about mouldy YummChips is spreading fast and tags @YummChips.`;
-        post({ id: 'social-alert', author: agent('socialMedia'), urgent: true, text: alertText, card: { kind: 'alert', handle: post_.customerHandle, caption: post_.caption, stats: `${compact(post_.counters.likes)} dislikes · ${compact(post_.counters.comments)} comments · posted ${post_.timeAgo.toLowerCase()}` } });
+        post({ id: 'social-alert', author: agent('socialMedia'), urgent: true, text: alertText, card: { kind: 'alert', handle: post_.customerHandle, caption: post_.caption, stats: `${compact(post_.counters.likes)} dislikes · ${compact(post_.counters.comments)} comments · posted ${post_.timeAgo.toLowerCase()}`, media: 'sarahPhoto' } });
         // Raised when the run completes (the Start-investigation gate is open), not while the agent is still working.
         if (state.stage === 'socialMediaApproval') alert = { id: 'social-alert', title: 'Social Media Agent', body: `🚨 @${me}, a customer post about mouldy YummChips is going viral.` };
         return;
@@ -171,8 +174,8 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
 
 function stageResult(stage: WorkflowStage): { text: string; card?: Card } | null {
   switch (stage) {
-    case 'identification': return { text: 'Found it. The batch code is printed on the packet in Sarah’s photo.', card: { kind: 'result', color: '#597EB2', title: 'Batch HLD-2407-A', lines: ['Matched to Line 4 · produced 08 July', 'Source: complaint photo + Production DB'] } };
-    case 'rca': return { text: 'Root cause and exposure confirmed.', card: { kind: 'result', color: '#769B58', title: 'Sealing temperature 160°C → 134°C', lines: ['18-minute drop on Line 4 · no quality hold', '40 FreshMart stores across 7 UK cities received the batch'] } };
+    case 'identification': return { text: 'Found it. The batch code is printed on the packet in Sarah’s photo.', card: { kind: 'result', color: '#597EB2', title: 'Batch HLD-2407-A', lines: ['Matched to Line 4 · produced 08 July', 'Source: complaint photo + Production DB'], media: 'batchLabel' } };
+    case 'rca': return { text: 'Root cause and exposure confirmed.', card: { kind: 'result', color: '#769B58', title: 'Sealing temperature 160°C → 134°C', lines: ['18-minute drop on Line 4 · no quality hold', '40 FreshMart stores across 7 UK cities received the batch'], media: 'factoryLog' } };
     default: return null;
   }
 }
@@ -183,7 +186,6 @@ function gatePrompt(stage: GateStage, me: string) {
     case 'orchestratorApproval': return `I’ve mapped production, quality, warehouse and sales data. @${me}, here’s the incident plan. Approve it and I’ll put the agents to work.`;
     case 'resolution': return `I’ve collated the evidence and the response options. @${me}, how should we respond?`;
     case 'recall': return `I’ve drafted the withdrawal list for the 40 affected stores. @${me}, which regions should I withdraw stock from?`;
-    case 'comms': return `I’ve drafted a public statement from the confirmed evidence. @${me}, review it and choose where to publish.`;
     case 'support': return `I’ve drafted a personal reply to Sarah. @${me}, choose how we make it right.`;
   }
 }
@@ -194,14 +196,13 @@ function resolvedText(stage: GateStage, state: DemoState, who: string) {
     return `✅ ${who} chose: ${decision?.title ?? 'a response'}`;
   }
   if (stage === 'socialMediaApproval') return `✅ ${who} started the investigation`;
-  const verb = stage === 'comms' ? 'approved publishing' : stage === 'support' ? 'approved the reply' : stage === 'recall' ? 'approved the withdrawal' : 'approved the plan';
+  const verb = stage === 'support' ? 'approved the reply' : stage === 'recall' ? 'approved the withdrawal' : 'approved the plan';
   return `✅ ${who} ${verb}`;
 }
 
 function gateResult(stage: GateStage, state: DemoState, stores: number) {
   switch (stage) {
     case 'recall': return `Withdrawal orders sent to ${stores} ${stores === 1 ? 'store' : 'stores'} (${state.regions.join(', ')}). Store acknowledgements are coming in.`;
-    case 'comms': return `Statement published on ${state.channels.join(', ')}.`;
     case 'support': return `Reply sent to Sarah with ${state.compensation === 'Voucher' ? 'a £40 goodwill voucher' : 'a curated apology hamper'}. Case linked to the incident record.`;
     default: return null;
   }
@@ -218,7 +219,7 @@ function outcomeCard(state: DemoState): Card {
   const reward = state.compensation === 'Voucher' ? 'a £40 voucher' : 'an apology hamper';
   if (state.decisionId === 'nothing' || state.stayedHuman) return { kind: 'outcome', tone: 'bad', title: 'FreshMart delists the product range', lines: ['Supplier products removed from all stores', 'Sarah’s post reached 2.1M views and is trending', 'A health-authority investigation has opened'] };
   if (state.decisionId === 'recall') return { kind: 'outcome', tone: 'partial', title: 'Stock withdrawn. Public concern remains.', lines: [`${stores} stores received withdrawal orders`, `Sarah received a direct reply and ${reward}`, 'No public statement: 3,200 new comments in 2 hours'] };
-  return { kind: 'outcome', tone: 'good', title: 'Incident resolved with evidence and care', lines: [`${stores} stores received withdrawal orders`, `Public statement published on ${state.channels.length} ${state.channels.length === 1 ? 'channel' : 'channels'}`, `Sarah received a personal reply and ${reward}`, 'Meanwhile the human team, 13 hrs 40 mins in, still hasn’t confirmed the root cause'] };
+  return { kind: 'outcome', tone: 'good', title: 'Incident resolved with evidence and care', lines: [`${stores} stores received withdrawal orders`, `Sarah received a personal reply and ${reward}`, 'Meanwhile the human team, 13 hrs 40 mins in, still hasn’t confirmed the root cause'] };
 }
 
 function buildReport(state: DemoState, me: string): IncidentReport {
@@ -237,8 +238,6 @@ function buildReport(state: DemoState, me: string): IncidentReport {
   add('orchestratorApproval', 'Incident plan', 'Approved: identify, investigate, respond');
   add('resolution', 'Response', decision?.title ?? '—');
   add('recall', 'Stock withdrawal', `${stores} of 40 stores · ${state.regions.join(', ') || 'none'}`);
-  const rewrote = state.approvals.comms === 'phone' ? 'you' : 'the team';
-  add('comms', 'Public statement', `Published on ${state.channels.join(', ')}${state.publicDraft !== defaultPublicDraft ? ` · rewritten by ${rewrote}` : ''}`);
   add('support', 'Reply to Sarah', `${state.compensation === 'Voucher' ? 'Sent with a £40 goodwill voucher' : 'Sent with a curated apology hamper'}${state.customerDraft !== defaultCustomerDraft ? ` · rewritten by ${state.approvals.support === 'phone' ? 'you' : 'the team'}` : ''}`);
   const update = state.compensation === 'Voucher' ? config.agentRace.voucherUpdate : config.agentRace.customerUpdate;
   const sarahGetsUpdate = state.decisionId === 'full' || state.decisionId === 'recall';

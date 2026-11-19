@@ -11,7 +11,7 @@ import './race.css';
 import './comparison.css';
 import { useCompanion } from '../companion/CompanionProvider';
 import { CompanionQr } from '../companion/CompanionQr';
-import { defaultCustomerDraft, defaultPublicDraft, type Region } from '../../shared/workflow';
+import { defaultCustomerDraft, type Region } from '../../shared/workflow';
 import { DRAFT_FOR_GATE, isGate, type Approver, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 type HumanStage = 'intro' | 'running' | 'summary';
@@ -35,8 +35,6 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     if (workflowStage === 'resolution') setDecision(config.agentRace.decisions[0]!);
   }, [workflowStage]);
   const [regions, setRegions] = useState<Region[]>(['North']);
-  const [publicDraft, setPublicDraft] = useState(defaultPublicDraft);
-  const [channels, setChannels] = useState(['Website']);
   const [customerDraft, setCustomerDraft] = useState(defaultCustomerDraft);
   const [compensation, setCompensation] = useState<'Hamper' | 'Voucher'>('Hamper');
   const [approvalFeedback, setApprovalFeedback] = useState<WorkflowStage | null>(null);
@@ -68,8 +66,6 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
     setWorkflowStage('socialMedia');
     setDecision(config.agentRace.decisions[0]!);
     setRegions(['North']);
-    setPublicDraft(defaultPublicDraft);
-    setChannels(['Website']);
     setCustomerDraft(defaultCustomerDraft);
     setCompensation('Hamper');
     setApprovals({});
@@ -89,8 +85,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
          if (!decision) return current;
          return decision.id === 'nothing' ? 'outcome' : 'recall';
        }
-      if (current === 'recall') return decision?.id === 'full' ? 'comms' : 'support';
-      if (current === 'comms') return 'support';
+      if (current === 'recall') return 'support';
       if (current === 'support') return 'outcome';
       return current;
     });
@@ -159,11 +154,11 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
   useEffect(() => {
     publish({
       humanStage, humanIndex: humanMessageIndex, stage: workflowStage, gateReady: isGate(workflowStage) && gateReady, feedback: approvalFeedback,
-      decisionId: decision?.id ?? null, regions, channels, publicDraft, customerDraft, compensation, approvals, stayedHuman,
+      decisionId: decision?.id ?? null, regions, customerDraft, compensation, approvals, stayedHuman,
       // Read at publish time (every stage change): at the outcome it is the final agent time.
       agentMinutes: comparisonElapsedRef.current / 30_000,
     });
-  }, [publish, humanStage, humanMessageIndex, workflowStage, gateReady, approvalFeedback, decision, regions, channels, publicDraft, customerDraft, compensation, approvals, stayedHuman]);
+  }, [publish, humanStage, humanMessageIndex, workflowStage, gateReady, approvalFeedback, decision, regions, customerDraft, compensation, approvals, stayedHuman]);
 
   const actionHandler = useRef<(action: PhoneAction) => void>(() => {});
   actionHandler.current = (action: PhoneAction) => {
@@ -176,13 +171,12 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       case 'chooseDecision': if (workflowStage === 'resolution') setDecision(findDecision(action.decisionId)); return;
       case 'toggleRegion': if (workflowStage === 'recall') toggleRegion(action.region); return;
       case 'setRegions': if (workflowStage === 'recall') setRegions(action.regions); return;
-      case 'toggleChannel': if (workflowStage === 'comms') toggleChannel(action.channel); return;
       case 'setCompensation': if (workflowStage === 'support') setCompensation(action.compensation); return;
       case 'setDraft': {
         const allowed = DRAFT_FOR_GATE[workflowStage];
         if (!allowed || allowed.field !== action.field) return;
         const text = action.text.slice(0, allowed.max);
-        if (action.field === 'publicDraft') setPublicDraft(text); else setCustomerDraft(text);
+        setCustomerDraft(text);
         return;
       }
       case 'approve': {
@@ -196,14 +190,13 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
           return;
         }
         if (action.stage === 'recall' && action.regions) { if (!action.regions.length) return; setRegions(action.regions); }
-        if (action.stage === 'comms' && action.channels) { if (!action.channels.length) return; setChannels(action.channels); }
         if (action.stage === 'support' && action.compensation) setCompensation(action.compensation);
         // The approval carries the final text, so a late keystroke can never change what was approved.
         const draftRule = DRAFT_FOR_GATE[action.stage];
         if (draftRule && action.draft !== undefined) {
           const text = action.draft.slice(0, draftRule.max);
           if (!text.trim()) return;
-          if (draftRule.field === 'publicDraft') setPublicDraft(text); else setCustomerDraft(text);
+          setCustomerDraft(text);
         }
         approveGate(action.stage, 'phone');
         return;
@@ -221,19 +214,15 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
       if (!isGate(workflowStage) || !gateReady || approvalFeedback || workflowPaused) return;
       if (workflowStage === 'recall' && regions.length === 0) return;
-      if (workflowStage === 'comms' && (channels.length === 0 || !publicDraft.trim())) return;
       event.preventDefault();
       approveGate(workflowStage, 'presenter');
     };
     window.addEventListener('keydown', handleOverride);
     return () => window.removeEventListener('keydown', handleOverride);
-  }, [remoteDecider, workflowStage, gateReady, approvalFeedback, workflowPaused, regions, channels, publicDraft, approveGate]);
+  }, [remoteDecider, workflowStage, gateReady, approvalFeedback, workflowPaused, regions, approveGate]);
 
   const toggleRegion = useCallback((region: Region) => {
     setRegions((current) => current.includes(region) ? current.filter((item) => item !== region) : [...current, region]);
-  }, []);
-  const toggleChannel = useCallback((channel: string) => {
-    setChannels((current) => current.includes(channel) ? current.filter((item) => item !== channel) : [...current, channel]);
   }, []);
 
   const handleNext = useCallback(() => {
@@ -248,7 +237,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       }
       return true;
     }
-    if (['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'comms', 'support', 'outcome'].includes(workflowStage)) return true;
+    if (['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'support', 'outcome'].includes(workflowStage)) return true;
     advanceWorkflow();
     return true;
   }, [workflowStage, humanStage, humanMessageIndex, advanceWorkflow, viewingHumanReport]);
@@ -273,7 +262,7 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
       return true;
     }
     const previous: Partial<Record<WorkflowStage, WorkflowStage>> = {
-       socialMediaApproval: 'socialMedia', orchestrator: 'socialMediaApproval', orchestratorApproval: 'orchestrator', identification: 'orchestratorApproval', rca: 'identification', resolution: 'rca', recall: 'resolution', comms: 'recall', support: decision?.id === 'full' ? 'comms' : 'recall', outcome: decision?.id === 'nothing' ? 'resolution' : 'support',
+       socialMediaApproval: 'socialMedia', orchestrator: 'socialMediaApproval', orchestratorApproval: 'orchestrator', identification: 'orchestratorApproval', rca: 'identification', resolution: 'rca', recall: 'resolution', support: 'recall', outcome: decision?.id === 'nothing' ? 'resolution' : 'support',
     };
     const target = previous[workflowStage];
     if (target) setWorkflowStage(target);
@@ -344,8 +333,6 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
           agentElapsed={comparisonElapsed}
           decision={decision}
           regions={regions}
-          publicDraft={publicDraft}
-          channels={channels}
           customerDraft={customerDraft}
           compensation={compensation}
           approvalFeedback={approvalFeedback}
@@ -356,8 +343,6 @@ export function AgentRace({ paused, onReplay, hopTarget, registerNextHandler, re
           onChooseDecision={setDecision}
           onToggleRegion={toggleRegion}
           onSetRegions={setRegions}
-          onPublicDraft={setPublicDraft}
-          onToggleChannel={toggleChannel}
           onCustomerDraft={setCustomerDraft}
           onCompensation={setCompensation}
         />

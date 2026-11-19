@@ -56,14 +56,14 @@ There is no unit-test suite; verification is build + lint + manual runs (below).
 ## Database (Supabase)
 - Table `demo_sessions` is closed to `anon`; access only via `security definer` RPCs with `search_path = ''` and explicit `grant execute ... to anon`.
 - Schema changes = new timestamped file in `supabase/migrations/`. There is no CLI access to the hosting account: the user runs new SQL in the dashboard SQL editor. Test SQL first in a throwaway container (`docker run postgres:17-alpine`, create `anon`/`authenticated` roles, apply all migrations in order).
-- Stores visitor first names and optional emails: treat as personal data; don't log or export them.
+- Stores visitor first names and optional WhatsApp numbers (plus legacy emails): treat as personal data; don't log or export them.
 
 ## Testing manually (Claude Browser pane)
 - Show the pane first; hidden/background tabs throttle animation and stall stage progress. Keep the laptop tab in front while a stage must advance.
 - Run laptop on 5199 and phone on 5175 (`.claude/launch.json`, local). Another process may hold 5173/5174.
 - Pair: on the laptop press `2` (human summary), read the QR link from `document.querySelector('[data-join-url]').dataset.joinUrl`, open it in a 375×812 tab.
 - Hop keys `1`–`9` jump stages; `A` approves for the phone; `R` replays (new session).
-- Phone without backend: `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|comms|support|stayed` or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Clear `localStorage` to re-see one-time steps (alert, email step, report auto-open).
+- Phone without backend: `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|support|stayed` or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Clear `localStorage` to re-see one-time steps (alert, WhatsApp step, report auto-open).
 - Prefer reading state from the DOM (`.workflow-panel[data-stage]`, `.sl-*` classes) over screenshots.
 
 ## Deploying (Railway, project `passionate-smile`)

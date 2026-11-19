@@ -17,10 +17,11 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 2. **Human-team summary:** the laptop's right panel shows a QR card ("Now you take over"). The phone opens a join screen (optional first name), then `#incidents`.
 3. `#incidents` looks like a freshly created Slack channel: name, "@Planner Agent created this channel today…", a description box, no history. Below it: **Unlock Intugle's Agentic Alpha** (starts the agents) and **I'll take my chances** (adverse outcome). The laptop shows "👋 <name> joined #incidents"; its own Unlock/Take-chances buttons still work.
 4. **Social Media Agent run (19 s):** phone stays silent and the channel empty (`#general` gets a quiet "agents are on it" note).
-5. **Run complete:** after a settle delay, a push-style banner + alarm + vibration; the channel fills with the alert (@-mentions the visitor, Sarah's post card) and the agent's second message carrying **🔍 Start investigation** (gate `socialMediaApproval`).
+5. **Run complete:** after a settle delay, a **critical incident banner** (red, ⚠ icon, "Critical · P1 incident" tag, shake + glow, red screen flash, a calm rising three-note chime (played twice, second softer), long vibration; stays 4.5 s or until tapped); the channel fills with the alert (@-mentions the visitor, Sarah's post card) and the agent's second message carrying **🔍 Start investigation** (gate `socialMediaApproval`).
 6. Each later agent: "typing…" while it works, then its request with Block-Kit-style controls, then (after approval) its result. **At most two messages per agent.**
-7. Gates on the phone: Start investigation, Approve plan, response choice (3 radios), recall regions (checkboxes + Select all), public statement (✎ Edit + channel checkboxes), reply to Sarah (✎ Edit + Hamper/Voucher). Selections mirror live on the laptop.
-8. **Outcome:** Planner Agent posts the outcome card with **📄 View your incident report**. 2.5 s later an **optional work-email step** appears (Skip always available), then the **incident report** sheet.
+   - **Agent graphics** mirror the laptop visual inside the existing messages (no extra messages): Sarah's photo in the Social Media alert card, the cropped printed batch label (`BATCH NO: HLD-2407-A`) under the Identification result, and a dark "Factory log search" window with the two red anomaly rows (134°C, 136°C) under the RCA result. Photos open full screen on tap. The Planner and later agents have no graphic.
+7. Gates on the phone: Start investigation, Approve plan, response choice (3 radios), recall regions (checkboxes + Select all), reply to Sarah (✎ Edit + Hamper/Voucher). Selections mirror live on the laptop. There is no public-statement gate (removed 2026-11-19).
+8. **Outcome:** Planner Agent posts the outcome card with **📄 View your incident report**. 2.5 s later an **optional WhatsApp-number step** (country code pre-filled `+91`, editable; a number typed with its own `+code` wins; a leading 0 is dropped; stored as E.164) appears (Skip always available), then the **incident report** sheet.
 9. The session freezes at the outcome; the phone keeps its final channel and report. Replay (`R`) on the laptop creates a new session and QR.
 
 ### Laptop behaviour while a phone is paired
@@ -40,12 +41,12 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 | `src/components/AgentRace.tsx` | Publishes position (`publish(...)`), applies `PhoneAction`s, `approveGate()`, `A` override, `start`/`stayHuman`. |
 | `src/components/WorkflowPanel.tsx` | `remoteDecider` lock, `onGateReadyChange`, phone-wait banner, `SocialMediaVisual` with the Start-investigation action. |
 | `companion/src/derive.ts` | Pure `DemoState → channels/messages/gates/alert/start/report`. The phone keeps no story state of its own. |
-| `companion/src/App.tsx` | Join screen, Slack shell, gates (Block-Kit style), notification banner, Edit sheet, email step, report sheet, Intugle-logo avatars. |
-| `companion/src/session.ts` | Join/resume via RPC, Realtime subscription, `send`, `submitEmail`, 15 s ended-status safety poll. |
+| `companion/src/App.tsx` | Join screen, Slack shell, gates (Block-Kit style), notification banner, Edit sheet, WhatsApp step, report sheet, Intugle-logo avatars. |
+| `companion/src/session.ts` | Join/resume via RPC, Realtime subscription, `send`, `submitWhatsapp`, 15 s ended-status safety poll. |
 | `companion/src/alerts.ts` | Knock (approvals) and alarm (incident alert) via Web Audio, vibration, Screen Wake Lock. |
 | `companion/src/mock.ts` | Dev-only `?mock=` driver (no laptop/Supabase). |
-| `companion/src/assets/` | Compressed hamper/voucher JPEGs (~100 KB) and the Intugle logo SVG. |
-| `supabase/migrations/` | `demo_sessions` table + RPCs; visitor email columns. |
+| `companion/src/assets/` | Compressed hamper/voucher JPEGs (~100 KB), Sarah's photo (`sarah-post.jpg`, 720 px, 88 KB), the batch-label crop (`batch-label.jpg`, region 1030,440 224×140 of `public/assets/social-post.png`), and the Intugle logo SVG. The RCA log rows come from `rcaLogExcerpt` in `shared/workflow.ts`. |
+| `supabase/migrations/` | `demo_sessions` table + RPCs; visitor contact columns (`20261119120000_visitor_whatsapp.sql` must be run in the SQL editor). |
 | `vite.companion.config.ts`, `tsconfig.companion.json` | Phone app build (root `companion/`, env from repo root, own Vite cache `node_modules/.vite-companion`). |
 
 ## Data Model / Persistence
@@ -58,26 +59,27 @@ Table `public.demo_sessions` (one row per demo run). Table is closed to `anon`; 
 | `decider_token` / `decider_name` | Set when the first phone joins; later scanners get `taken`. |
 | `state` jsonb | Latest `DemoState` (for reconnects / reloads). |
 | `status` | `open` → `live` (phone joined) → `ended` (outcome, replay or laptop unload). Ended is sticky. |
-| `visitor_email`, `email_submitted_at` | Optional email from the phone's email step (lowercased). |
+| `visitor_whatsapp`, `whatsapp_submitted_at` | Optional WhatsApp number from the phone's contact step (E.164, e.g. `+919876543210`). |
+| `visitor_email`, `email_submitted_at` | Legacy (email step replaced 2026-11-19); kept so earlier entries survive. |
 
-RPCs: `create_demo_session()`, `host_update_session(id, secret, state, status)`, `host_get_session(id, secret)`, `join_demo_session(id, name, token?)`, `submit_visitor_email(id, token, email)` (returns false for wrong token / invalid email; empty clears).
+RPCs: `create_demo_session()`, `host_update_session(id, secret, state, status)`, `host_get_session(id, secret)`, `join_demo_session(id, name, token?)`, `submit_visitor_whatsapp(id, token, number)` (validates `^\+[1-9][0-9]{7,14}$` after stripping spaces/dashes/dots/brackets; legacy `submit_visitor_email` unused) (returns false for wrong token / invalid email; empty clears).
 
-Export emails after the event (Supabase SQL editor):
+Export WhatsApp numbers after the event (Supabase SQL editor):
 ```sql
-select decider_name, visitor_email, email_submitted_at from demo_sessions where visitor_email is not null order by email_submitted_at;
+select decider_name, visitor_whatsapp, whatsapp_submitted_at from demo_sessions where visitor_whatsapp is not null order by whatsapp_submitted_at;
 ```
 
 ## API or Interface Contract
 - Realtime channel `demo:<sessionId>` (public broadcast). Events: `state` (laptop → phone, full `DemoState` with monotonic `seq`), `status` (`ended`), `action` (phone → laptop, `{ token, action }`), `joined`, `hello` (phone asks for a re-send).
 - **State sync, not an event log:** the laptop broadcasts its whole position on every change; the phone renders whatever that implies. Navigation, hops, replay and reconnects therefore never desync.
 - The laptop validates every action: right token, gate currently open and ready, not paused, not in feedback. Approvals carry their selections/final draft so late toggles can't change what was approved.
-- `PhoneAction`: `start`, `stayHuman`, `chooseDecision`, `toggleRegion`, `setRegions`, `toggleChannel`, `setCompensation`, `setDraft` (live text, capped 1200 / 600), `approve` (+ `decisionId`/`regions`/`channels`/`compensation`/`draft`).
+- `PhoneAction`: `start`, `stayHuman`, `chooseDecision`, `toggleRegion`, `setRegions`, `setCompensation`, `setDraft` (live reply text, capped 600), `approve` (+ `decisionId`/`regions`/`compensation`/`draft`). `DemoState` no longer carries `channels`/`publicDraft`.
 - `DemoState.agentMinutes` = laptop agent timer (elapsed ms / 30 000, same as its on-screen "mins"), used by the report.
 
 ## UI Behavior (phone)
 - Opens in `#incidents`; `#general` holds only the welcome (no unread badge). Channel name/description in `CHANNELS`.
 - No batch number appears before the Identification Agent's result (Planner stage, channel name and page title are batch-free; the laptop's Planner graph shows neutral cluster labels).
-- Alert fires only when `stage === 'socialMediaApproval'`, never sooner than 4 s after the app opened (`SETTLE_MS`), ≥1.5 s after its trigger. Delivered alerts are remembered per session in `localStorage`; stepping the laptop back before the alert (stage `null` or `socialMedia`) re-arms it; a plain reload does not replay it.
+- Alert fires only when `stage === 'socialMediaApproval'`, never sooner than 4 s after the app opened (`SETTLE_MS`), ≥0.5 s after its trigger (`ALERT_MIN_DELAY_MS`); the banner stays 4.5 s or until tapped. Delivered alerts are remembered per session in `localStorage`; stepping the laptop back before the alert (stage `null` or `socialMedia`) re-arms it; a plain reload does not replay it.
 - Approval requests (other gates): knock + short vibration + jump to `#incidents`.
 - ✎ Edit: bottom sheet, live debounced `setDraft`, Cancel restores the original, Done keeps it; quote shows "(edited)".
 - Report sheet: hero (Resolved / Partially resolved / Not resolved, visitor name), agents' time vs human team 13 hrs 40 min, decisions with approver ("You (Alex)", "Booth presenter", "Approved" for hopped steps, "rewritten by you" for edited drafts), findings, outcome, Sarah's Instagram-style update (hamper/voucher photo) on full/withdraw-only outcomes, optional "we'll be in touch at …".
@@ -87,7 +89,7 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 ## Operations and Troubleshooting
 - **Env** (`.env.local`, gitignored; template `.env.example`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable/anon key only), `VITE_COMPANION_URL` (phone URL encoded in the QR). Restart dev servers after editing.
 - **Run locally:** `npm run dev` (laptop), `npm run dev:companion` (phone, port 5174, LAN-reachable via `host: true`).
-- **Mock phone (no backend):** `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|comms|support|stayed`, or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Mock flags live in `localStorage` key `cypher-companion:*:mock` — clear it to re-see auto-open steps.
+- **Mock phone (no backend):** `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|support|stayed`, or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Mock flags live in `localStorage` key `cypher-companion:*:mock` — clear it to re-see auto-open steps.
 - **Migrations:** no CLI access to the Supabase account; run new files from `supabase/migrations/` in the dashboard SQL editor, in order.
 - **Railway** (project `passionate-smile`, CLI via `npx @railway/cli`):
   - Service `cypherdemo` (phone): variables `RAILPACK_BUILD_CMD=npm run build:companion`, `RAILPACK_SPA_OUTPUT_DIR=dist-companion`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. Do **not** set a start command (it disables Railpack static mode). `railway.json` was removed: Railway ignored it and config-as-code is deprecated (2026-12-01).
@@ -109,7 +111,9 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 
 ## Known Gaps and Follow-Up Work
 - [ ] Real-phone rehearsal (iPhone + Android over mobile data).
-- [ ] Move Supabase to an Intugle-owned project before collecting real emails; add a privacy-policy link on the email step.
+- [ ] Move Supabase to an Intugle-owned project before collecting real numbers; add a privacy-policy link on the WhatsApp step.
+- [x] Ran `supabase/migrations/20261119120000_visitor_whatsapp.sql` in the Supabase SQL editor (2026-11-19).
+- [ ] Delete test rows before the event: names BoothTest (WhatsApp `+447700900123`, fictional) and the earlier `booth-test@example.com` entry.
 - [ ] Railway service `cypherdemo` still auto-deploys from `main` (would fail: no `build:companion` on `main`). Switch Source → Branch to `feature/slack-companion`, or merge.
 - [ ] Trademark sign-off for the Slack look; confirm whether Intugle agents really integrate with Slack.
 - [ ] Social Media Agent visual overflows ~60 px at 1440×810 (fits at 1920×1080).
@@ -117,6 +121,9 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 
 ## Historical Sessions
 - [2026-11-18 — Slack companion build](../sessions/2026-11-18-slack-companion.md)
+- [2026-11-19 — Agent graphics on the phone](../sessions/2026-11-19-companion-agent-graphics.md)
+- [2026-11-19 — Critical alert and no public statement](../sessions/2026-11-19-critical-alert-and-no-statement.md)
+- [2026-11-19 — WhatsApp number instead of email](../sessions/2026-11-19-whatsapp-contact.md)
 
 ## Related Documentation
 - Decision record: [Slack companion architecture](../decisions/slack-companion-architecture.md)

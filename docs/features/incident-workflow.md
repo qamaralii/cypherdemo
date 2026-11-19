@@ -21,9 +21,9 @@ Offline booth demonstration contrasting human coordination with governed agent r
 - RCA replaces Find the Cause naming.
 - Identification adapts the supplied Batch Label Scan prototype: photo sweep → packaging/label brackets → enlarged crop/OCR → extracted-code transfer → production-record match. Existing complaint asset is reused. Animation runs for 16 seconds with a final 4-second hold; left tasks follow scan/read/search milestones. Resize rebuilds geometry at current progress; reduced motion displays the completed visual. Prototype CDN/fonts, controls, legend, and looping are excluded.
 - Pink unified approval panels eliminate duplicate headings. Response decisions are on the preparation page itself.
-- Four later agents prepare for 4.5 seconds; controls become active afterward. Workflow progress retains elapsed time when paused.
-- Public statement is editable and includes greeting/sign-off. Appreciation posts animate on opening.
-- Full response runs Recall → Public Response → Customer Care; withdrawal-only skips public response; no action goes directly to adverse outcome.
+- Three later agents (Response Planning, Recall, Customer Care) prepare for 4.5 seconds; controls become active afterward. Workflow progress retains elapsed time when paused.
+- Appreciation posts animate on opening.
+- **No public statement step** (removed 2026-11-19, user decision): both "Withdraw stock and issue public statement" (good outcome) and "Withdraw stock only" (partial outcome) run Recall → Customer Care; the option titles were deliberately kept. No action goes directly to the adverse outcome.
 - The Orchestrator Agent is presented as the **Planner Agent** everywhere (internal stage id stays `orchestrator`).
 - **Start investigation** gate (`socialMediaApproval`) follows the Social Media Agent's run: its approval sits in the "Investigation ready" card (Planner is the hand-off target).
 - The Planner stage reveals no findings: plan copy reads "Read the batch code from Sarah’s photo"; graph centre is "Sarah’s post"; cluster labels are neutral (Production lines · shifts, QC logs · holds, Stores · deliveries, Products · regions).
