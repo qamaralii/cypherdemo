@@ -4,7 +4,7 @@ Date: 2026-11-19
 Session Focus: Make the Social Media Agent's phone alert feel urgent, and remove the public statement step from the whole demo.
 
 ## Summary
-1. The phone's Social Media alert is now a **critical incident banner**: red gradient, white ⚠ icon, a blinking "Critical · P1 incident" tag, shake and pulsing glow, a red screen flash behind it, a two-tone siren (6 beeps, ~1.4 s) and a longer vibration (`[400,120,400,120,400,120,700]`). It stays 9 s (was 6 s) or until tapped. The alert message in `#incidents` carries the same red tag.
+1. The phone's Social Media alert is now a **critical incident banner**: red gradient, white ⚠ icon, a blinking "Critical · P1 incident" tag, shake and pulsing glow, a red screen flash behind it, a two-tone siren (6 beeps, ~1.4 s; replaced the same day by a calm rising three-note chime played twice, at the user's request) and a longer vibration (`[400,120,400,120,400,120,700]`). It stays 9 s (was 6 s) or until tapped. The alert message in `#incidents` carries the same red tag.
 2. The **Public Response Agent / `comms` gate is gone** from laptop, phone and protocol. Recall now goes straight to Customer Care for both response branches.
 
 ## Decisions

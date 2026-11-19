@@ -36,26 +36,29 @@ export function playKnock() {
   } catch { /* ignore */ }
 }
 
-/** Critical incident alarm: a two-tone siren (high/low, three cycles), loud enough to cut through a busy booth. */
+/** Incident alert: a clear but calm rising three-note chime, played twice (second time softer).
+ *  Urgent enough to notice at a busy booth without sounding like an alarm. */
 export function playAlarm() {
   try {
     if (!audio) return;
     void audio.resume();
     const now = audio.currentTime;
-    for (let i = 0; i < 6; i += 1) {
-      const offset = i * 0.24;
-      const osc = audio.createOscillator();
-      const gain = audio.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(i % 2 === 0 ? 988 : 740, now + offset);
-      gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.14, now + offset + 0.015);
-      gain.gain.setValueAtTime(0.14, now + offset + 0.18);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.22);
-      osc.connect(gain).connect(audio.destination);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.23);
-    }
+    const notes = [659.25, 830.61, 987.77]; // E5, G#5, B5
+    [{ at: 0, level: 0.16 }, { at: 0.75, level: 0.1 }].forEach(({ at, level }) => {
+      notes.forEach((frequency, i) => {
+        const start = now + at + i * 0.13;
+        const osc = audio!.createOscillator();
+        const gain = audio!.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(level, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.45);
+        osc.connect(gain).connect(audio!.destination);
+        osc.start(start);
+        osc.stop(start + 0.5);
+      });
+    });
   } catch { /* ignore */ }
 }
 
