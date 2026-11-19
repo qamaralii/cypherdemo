@@ -11,7 +11,7 @@ Session Focus: Replace the optional work-email step before the incident report w
 ## Verification
 - Migrations applied in order in a throwaway `postgres:17-alpine` with `anon`/`authenticated`: `+91 98765 43210` saved as `+919876543210`; no `+`, too short, letters, wrong token rejected; table still closed to `anon`.
 - Mock outcome at 375×812: invalid number shows the error; `098765 43210` with `+91` saves as `+919876543210`; report shows the thanks line.
-- Not verified live: the migration must first be run in the hosting Supabase project's SQL editor.
+- Live (after the user ran the SQL, deployed 4b16dfe to both Railway services): hosted laptop + hosted phone run saved `+447700900123` and showed the thanks line. Test row to delete: name BoothTest.
 
 ## Related Documentation
 - [Slack companion (phone)](../features/slack-companion.md)

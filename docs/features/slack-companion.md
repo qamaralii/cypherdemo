@@ -112,7 +112,8 @@ select decider_name, visitor_whatsapp, whatsapp_submitted_at from demo_sessions 
 ## Known Gaps and Follow-Up Work
 - [ ] Real-phone rehearsal (iPhone + Android over mobile data).
 - [ ] Move Supabase to an Intugle-owned project before collecting real numbers; add a privacy-policy link on the WhatsApp step.
-- [ ] Run `supabase/migrations/20261119120000_visitor_whatsapp.sql` in the Supabase SQL editor (until then the phone shows "Couldn’t save that just now" and visitors can only skip).
+- [x] Ran `supabase/migrations/20261119120000_visitor_whatsapp.sql` in the Supabase SQL editor (2026-11-19).
+- [ ] Delete test rows before the event: names BoothTest (WhatsApp `+447700900123`, fictional) and the earlier `booth-test@example.com` entry.
 - [ ] Railway service `cypherdemo` still auto-deploys from `main` (would fail: no `build:companion` on `main`). Switch Source → Branch to `feature/slack-companion`, or merge.
 - [ ] Trademark sign-off for the Slack look; confirm whether Intugle agents really integrate with Slack.
 - [ ] Social Media Agent visual overflows ~60 px at 1440×810 (fits at 1920×1080).
