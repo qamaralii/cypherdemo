@@ -70,7 +70,7 @@ function JoinScreen({ busy, onJoin }: { busy: boolean; onJoin: (name: string) =>
 
 /** The workspace gets this long to settle before any alert can fire, and alerts always trail their trigger slightly. */
 const SETTLE_MS = 4000;
-const ALERT_MIN_DELAY_MS = 1500;
+const ALERT_MIN_DELAY_MS = 500;
 
 // Alerts already delivered on this phone for this run, so a reload doesn't replay the alarm.
 const alertsKey = `cypher-companion:alerts:${new URLSearchParams(location.search).get('s') ?? 'mock'}`;
@@ -161,7 +161,7 @@ function Workspace({ state, status, me, connected, send, submitWhatsapp }: Sessi
   useEffect(() => {
     if (!notice) return;
     const open = window.setTimeout(() => setActive('agents'), 1200);
-    const hide = window.setTimeout(() => setNotice(null), 9000);
+    const hide = window.setTimeout(() => setNotice(null), 4500);
     return () => { window.clearTimeout(open); window.clearTimeout(hide); };
   }, [notice]);
 
