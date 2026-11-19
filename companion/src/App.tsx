@@ -10,7 +10,7 @@ import intugleLogo from './assets/intugle-icon.svg';
 import { useCompanionSession } from './session';
 import { mockStage, useMockSession } from './mock';
 import { buzz, keepAwake, playAlarm, playKnock, unlockAudio } from './alerts';
-import { channelOptions, compensationOptions, defaultCustomerDraft, defaultPublicDraft, orchestratorPlan, rcaLogExcerpt, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
+import { compensationOptions, defaultCustomerDraft, orchestratorPlan, rcaLogExcerpt, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
 import { AGENT_CHANNEL, DRAFT_FOR_GATE, type DemoState, type DraftField, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 const WORKSPACE = 'YummChips';
@@ -140,7 +140,7 @@ function Workspace({ state, status, me, connected, send, submitEmail }: SessionA
       setNotice({ title: incoming.title, body: incoming.body });
       setDrawer(false);
       playAlarm();
-      buzz([220, 90, 220, 90, 220]);
+      buzz([400, 120, 400, 120, 400, 120, 700]);
     }, delay);
     return () => window.clearTimeout(timer);
   }, [alertId, shownAlerts]);
@@ -159,7 +159,7 @@ function Workspace({ state, status, me, connected, send, submitEmail }: SessionA
   useEffect(() => {
     if (!notice) return;
     const open = window.setTimeout(() => setActive('agents'), 1200);
-    const hide = window.setTimeout(() => setNotice(null), 6000);
+    const hide = window.setTimeout(() => setNotice(null), 9000);
     return () => { window.clearTimeout(open); window.clearTimeout(hide); };
   }, [notice]);
 
@@ -216,10 +216,17 @@ function Workspace({ state, status, me, connected, send, submitEmail }: SessionA
       <span className={`sl-conn${connected ? ' on' : ''}`} title={connected ? 'Connected' : 'Reconnecting'} />
     </header>
 
-    {notice && <button className="sl-notice" role="alert" onClick={() => { setActive('agents'); setNotice(null); }}>
-      <span className="sl-notice-icon" aria-hidden="true">Y</span>
-      <span className="sl-notice-text"><span className="sl-notice-meta"><b>{WORKSPACE}</b> · #{AGENT_CHANNEL} · now</span><b>{notice.title}</b><span>{rich(notice.body, me)}</span></span>
-    </button>}
+    {notice && <>
+      <div className="sl-alarm-flash" aria-hidden="true" />
+      <button className="sl-notice critical" role="alert" onClick={() => { setActive('agents'); setNotice(null); }}>
+        <span className="sl-notice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 2.5 20h19L12 3Z" /><path d="M12 10v4.5" /><path d="M12 17.5h.01" /></svg></span>
+        <span className="sl-notice-text">
+          <span className="sl-notice-meta"><b>{WORKSPACE}</b> · #{AGENT_CHANNEL} · now</span>
+          <span className="sl-notice-sev"><i />Critical · P1 incident</span>
+          <b>{notice.title}</b><span>{rich(notice.body, me)}</span>
+        </span>
+      </button>
+    </>}
 
     <main ref={feed} className="sl-feed" aria-live="polite">
       <ChannelIntro id={current.id} />
@@ -275,6 +282,7 @@ function Message({ msg, me, children }: { msg: Msg; me: string; children?: React
   return <article className={`sl-msg${msg.urgent ? ' urgent' : ''}`}>
     {msg.author.logo ? <IntugleAvatar /> : <span className="sl-avatar" style={{ background: msg.author.color }}>{msg.author.initials}</span>}
     <div className="sl-msg-body">
+      {msg.urgent && <span className="sl-urgent-tag"><i />Critical · P1 incident</span>}
       <div className="sl-msg-head"><b>{msg.author.name}</b>{msg.author.app && <em>APP</em>}<time>{msg.time}</time></div>
       <p>{rich(msg.text, me)}</p>
       {children}
@@ -335,7 +343,7 @@ function GateBlock({ gate, state, approving, act }: { gate: GateView; state: Dem
   const editRule = editing ? DRAFT_FOR_GATE[editing] : undefined;
   const sheet = editRule && editing === gate.stage && gate.interactive && !approving
     ? <DraftEditor
-        title={editRule.field === 'publicDraft' ? 'Edit public statement' : 'Edit reply to Sarah'}
+        title="Edit reply to Sarah"
         initial={state[editRule.field]}
         max={editRule.max}
         onLive={(text) => act({ type: 'setDraft', field: editRule.field as DraftField, text })}
@@ -388,17 +396,6 @@ function GateBlock({ gate, state, approving, act }: { gate: GateView; state: Dem
         {footer}
       </div>;
     }
-
-    case 'comms':
-      return <div className="sl-blocks">
-        <Quote text={state.publicDraft} onEdit={gate.interactive && !approving ? () => setEditing('comms') : undefined} edited={state.publicDraft !== defaultPublicDraft} />
-        <div className="sl-field-label">Publish on · {state.channels.length} selected</div>
-        <div className="sl-checks">
-          {channelOptions.map((channel) => <Check key={channel} checked={state.channels.includes(channel)} disabled={disabled} onClick={() => act({ type: 'toggleChannel', channel })} label={channel} />)}
-        </div>
-        {approve('Publish statement', { channels: state.channels, draft: state.publicDraft }, state.channels.length === 0 || !state.publicDraft.trim())}
-        {sheet}
-      </div>;
 
     case 'support':
       return <div className="sl-blocks">

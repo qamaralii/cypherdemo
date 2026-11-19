@@ -97,7 +97,9 @@ button:disabled { cursor: default; }
 .sl-attach.outcome.bad { border-color: #e01e5a; background: #fdeef3; }
 
 /* ── Urgent alert from an agent ── */
-.sl-msg.urgent { margin: 4px 0; border-left: 4px solid #e01e5a; background: #fff5f7; animation: sl-in .3s ease-out both, sl-urgent 2.4s ease-out both; }
+.sl-msg.urgent { margin: 4px 0; border-left: 4px solid #d10f32; background: #fff1f3; box-shadow: inset 0 0 0 1px #f6c4cd; animation: sl-in .3s ease-out both, sl-urgent 3s ease-out both; }
+.sl-urgent-tag { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; padding: 2px 8px; border-radius: 4px; color: #fff; background: #d10f32; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.sl-urgent-tag i, .sl-notice-sev i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: sl-blink 1s steps(2, start) infinite; }
 .sl-alert-card { display: grid; gap: 4px; max-width: 360px; margin-top: 8px; padding: 10px 12px; border: 1px solid #f3c1cf; border-radius: 10px; background: #fff; }
 .sl-alert-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .sl-alert-head em { margin-left: auto; color: var(--sl-faint); font-size: 11px; font-style: normal; }
@@ -250,10 +252,23 @@ button:disabled { cursor: default; }
 
 @keyframes sl-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes sl-notice-in { from { opacity: 0; transform: translateY(-120%); } }
-@keyframes sl-urgent { 0% { background: #fde3ea; } 100% { background: #fff5f7; } }
+@keyframes sl-urgent { 0%, 30%, 60% { background: #ffd2da; } 15%, 45% { background: #fff1f3; } 100% { background: #fff1f3; } }
 @keyframes sl-fade { from { opacity: 0; } }
 @keyframes sl-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ── Critical incident banner (Social Media Agent alert) ── */
+.sl-notice.critical { padding: 12px 13px; border: 1px solid #ff6b7f; background: linear-gradient(160deg, #d10f32 0%, #9c0a24 100%); color: #fff; box-shadow: 0 14px 40px rgba(209, 15, 50, .55), 0 0 0 3px rgba(209, 15, 50, .25); backdrop-filter: none; animation: sl-notice-in .45s cubic-bezier(.2, .9, .25, 1.15) both, sl-shake .5s .45s ease-in-out 2, sl-glow 1.2s .45s ease-in-out infinite; }
+.sl-notice.critical .sl-notice-icon { background: #fff; color: #d10f32; animation: sl-pulse 1s ease-in-out infinite; }
+.sl-notice.critical .sl-notice-meta, .sl-notice.critical .sl-notice-meta b { color: #ffd6dd; }
+.sl-notice.critical .sl-mention, .sl-notice.critical .sl-mention.me { color: #fff; background: rgba(255, 255, 255, .22); }
+.sl-notice-sev { display: inline-flex; align-items: center; gap: 6px; justify-self: start; margin: 2px 0 1px; padding: 2px 7px; border-radius: 4px; background: rgba(0, 0, 0, .28); font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.sl-alarm-flash { position: absolute; inset: 0; z-index: 6; pointer-events: none; box-shadow: inset 0 0 0 0 rgba(209, 15, 50, 0); background: rgba(209, 15, 50, 0); animation: sl-flash 1.8s ease-out both; }
+@keyframes sl-flash { 0%, 34%, 68% { background: rgba(209, 15, 50, .28); box-shadow: inset 0 0 90px 30px rgba(209, 15, 50, .7); } 17%, 51% { background: rgba(209, 15, 50, .05); box-shadow: inset 0 0 60px 10px rgba(209, 15, 50, .4); } 100% { background: rgba(209, 15, 50, 0); box-shadow: inset 0 0 40px 6px rgba(209, 15, 50, .25); } }
+@keyframes sl-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+@keyframes sl-glow { 50% { box-shadow: 0 14px 44px rgba(209, 15, 50, .75), 0 0 0 6px rgba(209, 15, 50, .18); } }
+@keyframes sl-pulse { 50% { transform: scale(1.1); } }
+@keyframes sl-blink { to { visibility: hidden; } }
 
 /* Agent graphics (mirrors of the laptop visuals) */
 .sl-media { display: grid; gap: 4px; max-width: 300px; margin: 8px 0 0; }

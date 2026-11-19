@@ -17,10 +17,10 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 2. **Human-team summary:** the laptop's right panel shows a QR card ("Now you take over"). The phone opens a join screen (optional first name), then `#incidents`.
 3. `#incidents` looks like a freshly created Slack channel: name, "@Planner Agent created this channel today…", a description box, no history. Below it: **Unlock Intugle's Agentic Alpha** (starts the agents) and **I'll take my chances** (adverse outcome). The laptop shows "👋 <name> joined #incidents"; its own Unlock/Take-chances buttons still work.
 4. **Social Media Agent run (19 s):** phone stays silent and the channel empty (`#general` gets a quiet "agents are on it" note).
-5. **Run complete:** after a settle delay, a push-style banner + alarm + vibration; the channel fills with the alert (@-mentions the visitor, Sarah's post card) and the agent's second message carrying **🔍 Start investigation** (gate `socialMediaApproval`).
+5. **Run complete:** after a settle delay, a **critical incident banner** (red, ⚠ icon, "Critical · P1 incident" tag, shake + glow, red screen flash, two-tone siren, long vibration; stays 9 s or until tapped); the channel fills with the alert (@-mentions the visitor, Sarah's post card) and the agent's second message carrying **🔍 Start investigation** (gate `socialMediaApproval`).
 6. Each later agent: "typing…" while it works, then its request with Block-Kit-style controls, then (after approval) its result. **At most two messages per agent.**
    - **Agent graphics** mirror the laptop visual inside the existing messages (no extra messages): Sarah's photo in the Social Media alert card, the cropped printed batch label (`BATCH NO: HLD-2407-A`) under the Identification result, and a dark "Factory log search" window with the two red anomaly rows (134°C, 136°C) under the RCA result. Photos open full screen on tap. The Planner and later agents have no graphic.
-7. Gates on the phone: Start investigation, Approve plan, response choice (3 radios), recall regions (checkboxes + Select all), public statement (✎ Edit + channel checkboxes), reply to Sarah (✎ Edit + Hamper/Voucher). Selections mirror live on the laptop.
+7. Gates on the phone: Start investigation, Approve plan, response choice (3 radios), recall regions (checkboxes + Select all), reply to Sarah (✎ Edit + Hamper/Voucher). Selections mirror live on the laptop. There is no public-statement gate (removed 2026-11-19).
 8. **Outcome:** Planner Agent posts the outcome card with **📄 View your incident report**. 2.5 s later an **optional work-email step** appears (Skip always available), then the **incident report** sheet.
 9. The session freezes at the outcome; the phone keeps its final channel and report. Replay (`R`) on the laptop creates a new session and QR.
 
@@ -72,7 +72,7 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 - Realtime channel `demo:<sessionId>` (public broadcast). Events: `state` (laptop → phone, full `DemoState` with monotonic `seq`), `status` (`ended`), `action` (phone → laptop, `{ token, action }`), `joined`, `hello` (phone asks for a re-send).
 - **State sync, not an event log:** the laptop broadcasts its whole position on every change; the phone renders whatever that implies. Navigation, hops, replay and reconnects therefore never desync.
 - The laptop validates every action: right token, gate currently open and ready, not paused, not in feedback. Approvals carry their selections/final draft so late toggles can't change what was approved.
-- `PhoneAction`: `start`, `stayHuman`, `chooseDecision`, `toggleRegion`, `setRegions`, `toggleChannel`, `setCompensation`, `setDraft` (live text, capped 1200 / 600), `approve` (+ `decisionId`/`regions`/`channels`/`compensation`/`draft`).
+- `PhoneAction`: `start`, `stayHuman`, `chooseDecision`, `toggleRegion`, `setRegions`, `setCompensation`, `setDraft` (live reply text, capped 600), `approve` (+ `decisionId`/`regions`/`compensation`/`draft`). `DemoState` no longer carries `channels`/`publicDraft`.
 - `DemoState.agentMinutes` = laptop agent timer (elapsed ms / 30 000, same as its on-screen "mins"), used by the report.
 
 ## UI Behavior (phone)
@@ -88,7 +88,7 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 ## Operations and Troubleshooting
 - **Env** (`.env.local`, gitignored; template `.env.example`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (publishable/anon key only), `VITE_COMPANION_URL` (phone URL encoded in the QR). Restart dev servers after editing.
 - **Run locally:** `npm run dev` (laptop), `npm run dev:companion` (phone, port 5174, LAN-reachable via `host: true`).
-- **Mock phone (no backend):** `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|comms|support|stayed`, or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Mock flags live in `localStorage` key `cypher-companion:*:mock` — clear it to re-see auto-open steps.
+- **Mock phone (no backend):** `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|support|stayed`, or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Mock flags live in `localStorage` key `cypher-companion:*:mock` — clear it to re-see auto-open steps.
 - **Migrations:** no CLI access to the Supabase account; run new files from `supabase/migrations/` in the dashboard SQL editor, in order.
 - **Railway** (project `passionate-smile`, CLI via `npx @railway/cli`):
   - Service `cypherdemo` (phone): variables `RAILPACK_BUILD_CMD=npm run build:companion`, `RAILPACK_SPA_OUTPUT_DIR=dist-companion`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. Do **not** set a start command (it disables Railpack static mode). `railway.json` was removed: Railway ignored it and config-as-code is deprecated (2026-12-01).
@@ -119,6 +119,7 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 ## Historical Sessions
 - [2026-11-18 — Slack companion build](../sessions/2026-11-18-slack-companion.md)
 - [2026-11-19 — Agent graphics on the phone](../sessions/2026-11-19-companion-agent-graphics.md)
+- [2026-11-19 — Critical alert and no public statement](../sessions/2026-11-19-critical-alert-and-no-statement.md)
 
 ## Related Documentation
 - Decision record: [Slack companion architecture](../decisions/slack-companion-architecture.md)

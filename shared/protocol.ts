@@ -7,16 +7,15 @@ import type { Compensation, Region, WorkflowStage } from './workflow';
 export type DemoScene = 'opening' | 'f1' | 'f2a' | 'f2b' | 'f2c' | 'f3' | 'socialPost' | 'agentRace' | 'resolution' | 'end';
 export type HumanStage = 'intro' | 'running' | 'summary';
 export type DecisionId = 'full' | 'recall' | 'nothing';
-export type GateStage = 'socialMediaApproval' | 'orchestratorApproval' | 'resolution' | 'recall' | 'comms' | 'support';
+export type GateStage = 'socialMediaApproval' | 'orchestratorApproval' | 'resolution' | 'recall' | 'support';
 export type Approver = 'phone' | 'presenter';
-export type DraftField = 'publicDraft' | 'customerDraft';
+export type DraftField = 'customerDraft';
 /** Which draft each gate lets the visitor edit, and how long it may get. */
 export const DRAFT_FOR_GATE: Partial<Record<GateStage, { field: DraftField; max: number }>> = {
-  comms: { field: 'publicDraft', max: 1200 },
   support: { field: 'customerDraft', max: 600 },
 };
 
-export const GATE_STAGES: GateStage[] = ['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'comms', 'support'];
+export const GATE_STAGES: GateStage[] = ['socialMediaApproval', 'orchestratorApproval', 'resolution', 'recall', 'support'];
 export const isGate = (stage: WorkflowStage | null): stage is GateStage => GATE_STAGES.includes(stage as GateStage);
 
 /** Which agent asks for each approval. */
@@ -25,7 +24,6 @@ export const GATE_AGENT: Record<GateStage, WorkflowStage> = {
   orchestratorApproval: 'orchestrator',
   resolution: 'resolution',
   recall: 'recall',
-  comms: 'comms',
   support: 'support',
 };
 
@@ -42,8 +40,6 @@ export interface DemoState {
   feedback: WorkflowStage | null;
   decisionId: DecisionId | null;
   regions: Region[];
-  channels: string[];
-  publicDraft: string;
   customerDraft: string;
   compensation: Compensation;
   approvals: Partial<Record<GateStage, Approver>>;
@@ -64,8 +60,6 @@ export const initialDemoState: DemoState = {
   feedback: null,
   decisionId: 'full',
   regions: ['North'],
-  channels: ['Website'],
-  publicDraft: '',
   customerDraft: '',
   compensation: 'Hamper',
   approvals: {},
@@ -80,12 +74,11 @@ export type PhoneAction =
   | { type: 'chooseDecision'; decisionId: DecisionId }
   | { type: 'toggleRegion'; region: Region }
   | { type: 'setRegions'; regions: Region[] }
-  | { type: 'toggleChannel'; channel: string }
   | { type: 'setCompensation'; compensation: Compensation }
   /** Approval carries the phone's selections so a late-arriving toggle can never change what was approved. */
   /** Live text from the phone's Edit sheet; the laptop's draft box mirrors it as the visitor types. */
   | { type: 'setDraft'; field: DraftField; text: string }
-  | { type: 'approve'; stage: GateStage; decisionId?: DecisionId; regions?: Region[]; channels?: string[]; compensation?: Compensation; draft?: string };
+  | { type: 'approve'; stage: GateStage; decisionId?: DecisionId; regions?: Region[]; compensation?: Compensation; draft?: string };
 
 export interface ActionEnvelope {
   token: string;
@@ -110,7 +103,7 @@ export const EVENTS = {
 /** Workflow stages in the order this run visits them, given the response decision. */
 export function stagePath(decisionId: DecisionId | null): WorkflowStage[] {
   const head: WorkflowStage[] = ['socialMedia', 'socialMediaApproval', 'orchestrator', 'orchestratorApproval', 'identification', 'rca', 'resolution'];
-  const tail: WorkflowStage[] = decisionId === 'nothing' ? [] : decisionId === 'recall' ? ['recall', 'support'] : ['recall', 'comms', 'support'];
+  const tail: WorkflowStage[] = decisionId === 'nothing' ? [] : ['recall', 'support'];
   return [...head, ...tail, 'outcome'];
 }
 
@@ -120,7 +113,6 @@ export function applySelection(state: DemoState, action: PhoneAction): DemoState
     case 'chooseDecision': return { ...state, decisionId: action.decisionId };
     case 'toggleRegion': return { ...state, regions: state.regions.includes(action.region) ? state.regions.filter((r) => r !== action.region) : [...state.regions, action.region] };
     case 'setRegions': return { ...state, regions: action.regions };
-    case 'toggleChannel': return { ...state, channels: state.channels.includes(action.channel) ? state.channels.filter((c) => c !== action.channel) : [...state.channels, action.channel] };
     case 'setCompensation': return { ...state, compensation: action.compensation };
     case 'setDraft': return { ...state, [action.field]: action.text };
     default: return state;

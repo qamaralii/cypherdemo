@@ -63,7 +63,7 @@ There is no unit-test suite; verification is build + lint + manual runs (below).
 - Run laptop on 5199 and phone on 5175 (`.claude/launch.json`, local). Another process may hold 5173/5174.
 - Pair: on the laptop press `2` (human summary), read the QR link from `document.querySelector('[data-join-url]').dataset.joinUrl`, open it in a 375×812 tab.
 - Hop keys `1`–`9` jump stages; `A` approves for the phone; `R` replays (new session).
-- Phone without backend: `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|comms|support|stayed` or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Clear `localStorage` to re-see one-time steps (alert, email step, report auto-open).
+- Phone without backend: `/?mock=summary|socialMedia|socialMediaApproval|resolution|recall|support|stayed` or `/?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher`. Clear `localStorage` to re-see one-time steps (alert, email step, report auto-open).
 - Prefer reading state from the DOM (`.workflow-panel[data-stage]`, `.sl-*` classes) over screenshots.
 
 ## Deploying (Railway, project `passionate-smile`)

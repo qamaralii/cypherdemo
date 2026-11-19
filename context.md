@@ -63,8 +63,6 @@ Social Media Agent
 -> Choose response on the same page (HITL)
 -> Recall Agent
 -> Recall-region approval (HITL)
--> Public Response Agent, full-response branch only
--> Comms approval (HITL)
 -> Customer Care Agent
 -> Support approval (HITL)
 -> Outcome
@@ -86,17 +84,16 @@ Social Media Agent
 - RCA: scans stable factory logs, locks red anomalies, correlates the batch to the 160C -> 134C drop, then maps 40 affected stores across 7 UK cities.
 - Response Planning: reveals evidence and three response options together; no intermediate review page.
 - Recall: selects all or chosen North/South/East/West/Central regions, then issues withdrawal orders.
-- Public Response: editable post plus Website/Instagram/Twitter/Email/In-store channels; only runs for the full-response branch.
 - Customer Care: editable Sarah message plus Hamper or Voucher compensation.
-- Planner, Response Planning, Recall, Public Response, and Customer Care use unified pink human approval/decision panels.
-- Response Planning, Recall, Public Response, and Customer Care prepare over 4.5 seconds before controls become active. Stage progress preserves elapsed time across pause/resume; reduced motion skips preparation reveals.
-- Public statement includes a formal salutation, incident details, customer guidance, and YummChips sign-off.
+- Planner, Response Planning, Recall, and Customer Care use unified pink human approval/decision panels.
+- Response Planning, Recall, and Customer Care prepare over 4.5 seconds before controls become active. Stage progress preserves elapsed time across pause/resume; reduced motion skips preparation reveals.
+- The Public Response Agent (public statement) was removed on 2026-11-19: both response branches run Recall -> Customer Care.
 
 ### Decision Branches
 
 | Decision | Downstream workflow |
 | --- | --- |
-| Withdraw stock and issue public statement | Recall -> Public Response -> Customer Care -> positive outcome |
+| Withdraw stock and issue public statement | Recall -> Customer Care -> positive outcome (title kept; no statement step) |
 | Withdraw stock only | Recall -> Customer Care -> partial outcome |
 | Take no action | Direct adverse outcome; no downstream agents |
 

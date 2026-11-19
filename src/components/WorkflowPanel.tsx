@@ -7,7 +7,7 @@ import { SocialMediaAgentRun } from './SocialMediaAgentRun';
 import { RcaAgentRun, rcaTaskIndex } from './RcaAgentRun';
 import { OrchestratorGraph, ORCHESTRATOR_PLAN_STARTS } from './OrchestratorGraph';
 
-import { workflowStages, regionOptions, channelOptions, orchestratorPlan, type Region, type WorkflowStage } from '../../shared/workflow';
+import { workflowStages, regionOptions, orchestratorPlan, type Region, type WorkflowStage } from '../../shared/workflow';
 import { GATE_AGENT, isGate } from '../../shared/protocol';
 
 export type { WorkflowStage };
@@ -27,8 +27,6 @@ interface Props {
   agentElapsed?: number;
   decision: Decision | null;
   regions: Region[];
-  publicDraft: string;
-  channels: string[];
   customerDraft: string;
   compensation: 'Hamper' | 'Voucher';
   approvalFeedback: WorkflowStage | null;
@@ -37,8 +35,6 @@ interface Props {
   onChooseDecision: (decision: Decision) => void;
   onToggleRegion: (region: Region) => void;
   onSetRegions: (regions: Region[]) => void;
-  onPublicDraft: (value: string) => void;
-  onToggleChannel: (channel: string) => void;
   onCustomerDraft: (value: string) => void;
   onCompensation: (value: 'Hamper' | 'Voucher') => void;
   /** Name of the paired phone's decider. While set, the laptop's approval controls are locked and wait for the phone. */
@@ -48,23 +44,21 @@ interface Props {
 
 const stages = workflowStages;
 const regions = regionOptions;
-const channels = channelOptions;
 
 function activeStageId(stage: WorkflowStage): WorkflowStage {
   return stage === 'socialMediaApproval' ? 'socialMedia' : stage === 'orchestratorApproval' ? 'orchestrator' : stage === 'outcome' ? 'support' : stage;
 }
 
 export function WorkflowPanel(props: Props) {
-  const { stage, paused, agentElapsed = 0, decision, regions: selectedRegions, publicDraft, channels: selectedChannels, customerDraft, compensation, approvalFeedback } = props;
+  const { stage, paused, agentElapsed = 0, decision, regions: selectedRegions, customerDraft, compensation, approvalFeedback } = props;
   const activeId = activeStageId(stage);
   const activeIndex = stages.findIndex((item) => item.id === activeId);
   const selectedStores = selectedRegions.reduce((total, region) => total + (regions.find((item) => item.name === region)?.stores ?? 0), 0);
-  const canRunComms = decision?.id === 'full';
   const [showCustomerUpdate, setShowCustomerUpdate] = useState(false);
   const displayStages = stages.filter((item) => {
     const itemIndex = stages.findIndex((entry) => entry.id === item.id);
-    const noActionSkipsAgent = decision?.id === 'nothing' && ['recall', 'comms', 'support'].includes(item.id);
-    return itemIndex <= activeIndex && !noActionSkipsAgent && (item.id !== 'comms' || canRunComms || stage === 'comms');
+    const noActionSkipsAgent = decision?.id === 'nothing' && ['recall', 'support'].includes(item.id);
+    return itemIndex <= activeIndex && !noActionSkipsAgent;
   });
   const progress = useStageProgress(stage, paused);
   const visualProgress = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : progress;
@@ -79,7 +73,7 @@ export function WorkflowPanel(props: Props) {
      : stage === 'rca'
        ? rcaTaskIndex(visualProgress)
      : Math.min(2, Math.floor(progress * 3));
-   const preparing = ['resolution', 'recall', 'comms', 'support'].includes(stage) && progress < 1;
+   const preparing = ['resolution', 'recall', 'support'].includes(stage) && progress < 1;
    const remoteLocked = Boolean(props.remoteDecider) && isGate(stage);
    const controlsPaused = paused || preparing || Boolean(approvalFeedback) || remoteLocked;
    const gateReady = isGate(stage) && !preparing && !approvalFeedback;
@@ -91,7 +85,6 @@ export function WorkflowPanel(props: Props) {
     orchestratorApproval: 'orchestrator',
     resolution: 'resolution',
     recall: 'recall',
-    comms: 'comms',
     support: 'support',
   };
 
@@ -122,11 +115,10 @@ export function WorkflowPanel(props: Props) {
             const awaitingApproval = !preparing && stage !== 'resolution' && approvalAgent[stage] === item.id;
             const awaitingDecision = !preparing && stage === 'resolution' && item.id === 'resolution';
             const active = item.id === activeId && stage !== 'outcome' && !awaitingApproval && !awaitingDecision;
-            const skipped = item.id === 'comms' && decision?.id === 'recall';
             const workComplete = complete || awaitingApproval || awaitingDecision;
             return (
-              <article key={item.id} className={`workflow-agent${complete ? ' done' : ''}${active ? ' active' : ''}${awaitingApproval || awaitingDecision ? ' awaiting-approval' : ''}${skipped ? ' skipped' : ''}`}>
-                <div className="workflow-agent-topline"><span>{workComplete ? '✓' : active ? <i className="spin-ring" /> : '○'}</span><b>{item.name}</b><em>{skipped ? 'Skipped' : awaitingDecision ? 'Human decision required' : awaitingApproval ? 'Awaiting approval' : complete ? 'Complete' : active ? 'Running' : 'Queued'}</em></div>
+              <article key={item.id} className={`workflow-agent${complete ? ' done' : ''}${active ? ' active' : ''}${awaitingApproval || awaitingDecision ? ' awaiting-approval' : ''}`}>
+                <div className="workflow-agent-topline"><span>{workComplete ? '✓' : active ? <i className="spin-ring" /> : '○'}</span><b>{item.name}</b><em>{awaitingDecision ? 'Human decision required' : awaitingApproval ? 'Awaiting approval' : complete ? 'Complete' : active ? 'Running' : 'Queued'}</em></div>
                 {(workComplete || active) && <small>{item.summary}</small>}
                 {active && <div className="workflow-task-list">{item.tasks.map((task, index) => <span key={task} className={index < activeTaskIndex ? 'done' : index === activeTaskIndex ? 'active' : ''}><i>{index < activeTaskIndex ? '✓' : index === activeTaskIndex ? <i className="spin-ring" /> : '○'}</i><b>{task}</b><em>{index < activeTaskIndex ? 'Done' : index === activeTaskIndex ? 'Working now' : 'Next'}</em></span>)}</div>}
                 {(awaitingApproval || awaitingDecision) && <div className="workflow-task-list approval-wait"><span className="done"><i>✓</i><b>{awaitingDecision ? 'Response options collated' : item.tasks[0]}</b><em>Done</em></span><span><i>○</i><b>{awaitingDecision ? 'Human selects response' : 'Human approval required'}</b><em>Waiting</em></span></div>}
@@ -147,11 +139,10 @@ export function WorkflowPanel(props: Props) {
               {stage === 'rca' && <RcaAgentRun progress={visualProgress} />}
               {stage === 'resolution' && <ResolutionVisual progress={progress} decision={decision} onChoose={props.onChooseDecision} onAdvance={() => props.onApproval('resolution')} paused={controlsPaused} />}
               {stage === 'recall' && <RecallVisual progress={progress} selectedRegions={selectedRegions} selectedStores={selectedStores} onToggle={props.onToggleRegion} onSetRegions={props.onSetRegions} onAdvance={() => props.onApproval('recall')} paused={controlsPaused} />}
-              {stage === 'comms' && <CommsVisual progress={progress} draft={publicDraft} channels={selectedChannels} onDraft={props.onPublicDraft} onToggle={props.onToggleChannel} onAdvance={() => props.onApproval('comms')} paused={controlsPaused} />}
               {stage === 'support' && <SupportVisual progress={progress} draft={customerDraft} compensation={compensation} onDraft={props.onCustomerDraft} onCompensation={props.onCompensation} onAdvance={() => props.onApproval('support')} paused={controlsPaused} />}
               {stage === 'outcome' && <OutcomeVisual decision={decision} selectedStores={selectedStores} compensation={compensation} showCustomerUpdate={showCustomerUpdate} onViewCustomerUpdate={() => setShowCustomerUpdate(true)} onBackToOutcome={() => setShowCustomerUpdate(false)} />}
               {remoteLocked && gateReady && stage !== 'socialMediaApproval' && <PhoneWaitBanner name={props.remoteDecider!} agent={stages.find((item) => item.id === GATE_AGENT[stage as keyof typeof GATE_AGENT])?.name ?? 'An agent'} />}
-              {approvalFeedback && <ApprovalFeedback stage={approvalFeedback} regions={selectedRegions} channels={selectedChannels} compensation={compensation} />}
+              {approvalFeedback && <ApprovalFeedback stage={approvalFeedback} regions={selectedRegions} compensation={compensation} />}
             </div>
           </div>
         </aside>
@@ -168,7 +159,6 @@ function completedFinding(id: WorkflowStage, decision: Decision | null, selected
     rca: '160°C → 134°C temperature drop linked to 40 affected stores.',
     resolution: 'Risk-aware response options collated for human review.',
     recall: `${selectedStores || 40} stores selected for stock withdrawal.`,
-    comms: 'Approved public apology prepared for selected channels.',
     support: `Personal customer response approved with ${compensationLabel(decision)}.`,
   };
   return findings[id] ?? 'Completed.';
@@ -185,14 +175,13 @@ function Reveal({ visible, children, className = '' }: { visible: boolean; child
   return <div className={`stage-reveal ${className}${visible ? ' visible' : ''}`} inert={!visible}>{children}</div>;
 }
 
-function ApprovalFeedback({ stage, regions: selectedRegions, channels, compensation }: { stage: WorkflowStage; regions: Region[]; channels: string[]; compensation: 'Hamper' | 'Voucher' }) {
+function ApprovalFeedback({ stage, regions: selectedRegions, compensation }: { stage: WorkflowStage; regions: Region[]; compensation: 'Hamper' | 'Voucher' }) {
   if (stage === 'orchestratorApproval') return <div className="approval-feedback feedback-plan"><span>PLAN APPROVED</span><strong>Investigation brief released</strong><div className="feedback-plan-lines"><i /><i /><i /></div><p>Batch identification, root-cause analysis, and response planning are now authorised.</p></div>;
   if (stage === 'recall') {
     const selectedStores = selectedRegions.reduce((total, region) => total + (regions.find((item) => item.name === region)?.stores ?? 0), 0);
     const recallRegions: [Region, number, number][] = [['North', 192, 82], ['West', 158, 160], ['Central', 194, 151], ['East', 231, 151], ['South', 211, 205]];
     return <div className="approval-feedback feedback-recall"><span>RECALL ORDERS ISSUED</span><strong>{selectedStores} stores notified</strong><div className="feedback-recall-map"><svg viewBox="125 0 155 250" role="img" aria-label="UK map showing selected recall regions"><path className="recall-uk-outline" d="M180 14c18 5 27 19 25 34l12 15-4 21 16 15-4 22 13 18-12 17 10 22-13 19 5 27-20 15-11 24-20-4-12-27-17-9-5-27-19-19 4-24-12-21 12-23-5-26 13-18 2-27 18-17 2-24 18-13Z" /><path className="recall-ireland-outline" d="M99 115l14-15 17 8 4 23-11 21-16-3-10-18 2-16Z" />{recallRegions.map(([region, x, y]) => { const selected = selectedRegions.includes(region); return <g key={region} className={`recall-region-node${selected ? ' selected' : ''}`}><line x1="194" y1="151" x2={x} y2={y} /><circle cx={x} cy={y} r="7" /><text x={x + 11} y={y + 4}>{region}</text>{selected && <text className="recall-issued" x={x + 11} y={y + 16}>Order issued</text>}</g>; })}</svg></div><p>{selectedRegions.join(', ')} selected for stock withdrawal.</p></div>;
   }
-  if (stage === 'comms') return <div className="approval-feedback feedback-comms"><span>PUBLIC RESPONSE PUBLISHED</span><strong>{channels.length} selected channels updated</strong><div className="feedback-channel-row">{channels.map((channel) => <b key={channel}>{channel}</b>)}</div><p>The approved public statement is now distributing.</p></div>;
   return <div className="approval-feedback feedback-support"><span>CUSTOMER RESPONSE SENT</span><strong>Sarah&apos;s case has been updated</strong><div className="feedback-message"><b>To Sarah Mitchell</b><p>Personal response delivered · {compensation} confirmed</p></div><p>Customer care record linked to the incident.</p></div>;
 }
 
@@ -227,10 +216,6 @@ function RecallVisual({ progress, selectedRegions, selectedStores, onToggle, onS
   return <section className="recall-workspace merged-approval"><ApprovalHeading title="Approve stock withdrawal" /><Reveal visible={progress >= .15} className="recall-heading"><strong>{selectedStores} of 40 stores selected</strong><p>Only selected stores will receive withdrawal orders.</p></Reveal><div className="region-grid">{regions.map((region, index) => <Reveal key={region.name} visible={progress >= .25 + index * .12}><button disabled={paused} className={selectedRegions.includes(region.name) ? 'selected' : ''} onClick={() => onToggle(region.name)}><b>{region.name}</b><span>{region.stores} stores</span></button></Reveal>)}</div><Reveal visible={progress >= .85} className="recall-actions"><button disabled={paused} onClick={() => onSetRegions(regions.map((item) => item.name))}>Select all 40</button><button disabled={paused} onClick={() => onSetRegions([])}>Clear selection</button></Reveal><button className="approval-action" disabled={paused || selectedStores === 0} onClick={onAdvance}>Issue recall orders →</button></section>;
 }
 
-function CommsVisual({ progress, draft, channels: selected, onDraft, onToggle, onAdvance, paused }: { progress: number; draft: string; channels: string[]; onDraft: (value: string) => void; onToggle: (channel: string) => void; onAdvance: () => void; paused: boolean }) {
-  return <section className="comms-workspace merged-approval"><ApprovalHeading title="Approve the public statement" /><Reveal visible={progress >= .2} className="draft-reveal"><label>PUBLIC APOLOGY DRAFT<textarea disabled={paused} value={draft} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onDraft(event.target.value)} /></label></Reveal><Reveal visible={progress >= .65} className="channel-select"><span>PUBLISH ON · {selected.length} SELECTED</span>{channels.map((channel) => <button disabled={paused} key={channel} className={selected.includes(channel) ? 'selected' : ''} onClick={() => onToggle(channel)}>{selected.includes(channel) ? '✓ ' : ''}{channel}</button>)}</Reveal><button className="approval-action" disabled={paused || selected.length === 0 || !draft.trim()} onClick={onAdvance}>Publish approved response →</button></section>;
-}
-
 function SupportVisual({ progress, draft, compensation, onDraft, onCompensation, onAdvance, paused }: { progress: number; draft: string; compensation: 'Hamper' | 'Voucher'; onDraft: (value: string) => void; onCompensation: (value: 'Hamper' | 'Voucher') => void; onAdvance: () => void; paused: boolean }) {
   return <section className="support-workspace merged-approval"><ApprovalHeading title="Approve Sarah’s customer response" /><Reveal visible={progress >= .2} className="draft-reveal"><label>CUSTOMER MESSAGE<textarea disabled={paused} value={draft} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onDraft(event.target.value)} /></label></Reveal><Reveal visible={progress >= .65} className="compensation-grid">{(['Hamper', 'Voucher'] as const).map((item) => <button disabled={paused} key={item} className={compensation === item ? 'selected' : ''} onClick={() => onCompensation(item)}><b>{item}</b><span>{item === 'Hamper' ? 'Curated apology hamper' : '£40 goodwill voucher'}</span></button>)}</Reveal><Reveal visible={progress >= .85}><p>Sarah Mitchell · verified contact · {compensation} selected</p></Reveal><button className="approval-action" disabled={paused || !draft.trim()} onClick={onAdvance}>Send customer response →</button></section>;
 }
@@ -253,7 +238,7 @@ function useStageProgress(stage: WorkflowStage, paused: boolean) {
     setClock({ stage, progress: 0 });
   }, [stage]);
   useEffect(() => {
-    const duration = AUTO_STAGE_DURATIONS[stage] ?? (['resolution', 'recall', 'comms', 'support'].includes(stage) ? 4_500 : 0);
+    const duration = AUTO_STAGE_DURATIONS[stage] ?? (['resolution', 'recall', 'support'].includes(stage) ? 4_500 : 0);
     if (!duration || paused) return;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setClock({ stage, progress: AUTO_STAGE_DURATIONS[stage] ? 0 : 1 });

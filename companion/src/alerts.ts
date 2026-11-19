@@ -36,24 +36,26 @@ export function playKnock() {
   } catch { /* ignore */ }
 }
 
-/** Urgent incident alarm: three quick rising beeps. */
+/** Critical incident alarm: a two-tone siren (high/low, three cycles), loud enough to cut through a busy booth. */
 export function playAlarm() {
   try {
     if (!audio) return;
     void audio.resume();
     const now = audio.currentTime;
-    [0, 0.16, 0.32].forEach((offset, i) => {
-      const osc = audio!.createOscillator();
-      const gain = audio!.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(880 + i * 110, now + offset);
+    for (let i = 0; i < 6; i += 1) {
+      const offset = i * 0.24;
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(i % 2 === 0 ? 988 : 740, now + offset);
       gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + offset + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.12);
-      osc.connect(gain).connect(audio!.destination);
+      gain.gain.exponentialRampToValueAtTime(0.14, now + offset + 0.015);
+      gain.gain.setValueAtTime(0.14, now + offset + 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.22);
+      osc.connect(gain).connect(audio.destination);
       osc.start(now + offset);
-      osc.stop(now + offset + 0.14);
-    });
+      osc.stop(now + offset + 0.23);
+    }
   } catch { /* ignore */ }
 }
 

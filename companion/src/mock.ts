@@ -1,20 +1,20 @@
 // Dev-only: drive the phone UI without a laptop or Supabase. Open /?mock=<stage>, e.g. ?mock=summary, ?mock=socialMedia or ?mock=recall.
 import { useCallback, useState } from 'react';
 import { applySelection, initialDemoState, stagePath, type DemoState, type PhoneAction, type SessionStatus } from '../../shared/protocol';
-import { defaultCustomerDraft, defaultPublicDraft, type WorkflowStage } from '../../shared/workflow';
+import { defaultCustomerDraft, type WorkflowStage } from '../../shared/workflow';
 
 export const mockStage = import.meta.env.DEV ? new URLSearchParams(location.search).get('mock') : null;
 
 function stateFor(target: string): DemoState {
-  const base: DemoState = { ...initialDemoState, publicDraft: defaultPublicDraft, customerDraft: defaultCustomerDraft, seq: 1 };
+  const base: DemoState = { ...initialDemoState, customerDraft: defaultCustomerDraft, seq: 1 };
   if (target === 'summary') return { ...base, scene: 'agentRace', humanStage: 'summary' };
   if (target === 'outcome' || target === 'stayed') {
     // ?mock=outcome&decision=full|recall|nothing&comp=Hamper|Voucher, or ?mock=stayed
     const params = new URLSearchParams(location.search);
     const decisionId = (params.get('decision') ?? 'full') as DemoState['decisionId'];
     return { ...base, scene: 'agentRace', humanStage: 'summary', stage: 'outcome', decisionId, stayedHuman: target === 'stayed',
-      regions: ['North', 'West'], channels: ['Website', 'Instagram'], compensation: params.get('comp') === 'Voucher' ? 'Voucher' : 'Hamper', agentMinutes: 1.62,
-      approvals: { socialMediaApproval: 'phone', orchestratorApproval: 'phone', resolution: 'phone', recall: 'phone', comms: 'presenter', support: 'phone' } };
+      regions: ['North', 'West'], compensation: params.get('comp') === 'Voucher' ? 'Voucher' : 'Hamper', agentMinutes: 1.62,
+      approvals: { socialMediaApproval: 'phone', orchestratorApproval: 'phone', resolution: 'phone', recall: 'presenter', support: 'phone' } };
   }
   return { ...base, scene: 'agentRace', humanStage: 'summary', stage: target as WorkflowStage, gateReady: true };
 }
