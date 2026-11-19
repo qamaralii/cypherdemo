@@ -19,9 +19,12 @@ export const CHANNELS: Record<ChannelId, { name: string; topic: string }> = {
 /** `logo`: show the Intugle logo as the avatar (every agent and the Intugle bot share it). */
 export interface Person { name: string; initials: string; color: string; app?: boolean; logo?: boolean }
 
+/** Picture shown with an agent's result, mirroring the graphic on the laptop for that agent. */
+export type Media = 'sarahPhoto' | 'batchLabel' | 'factoryLog';
+
 export type Card =
-  | { kind: 'alert'; handle: string; caption: string; stats: string }
-  | { kind: 'result'; color: string; title: string; lines: string[] }
+  | { kind: 'alert'; handle: string; caption: string; stats: string; media?: Media }
+  | { kind: 'result'; color: string; title: string; lines: string[]; media?: Media }
   | { kind: 'outcome'; tone: 'good' | 'partial' | 'bad'; title: string; lines: string[]; report?: boolean };
 
 export interface Msg {
@@ -117,7 +120,7 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
         if (isCurrent) return;
         const post_ = config.socialPost;
         const alertText = `🚨 @${me}, something’s wrong. A customer post about mouldy YummChips is spreading fast and tags @YummChips.`;
-        post({ id: 'social-alert', author: agent('socialMedia'), urgent: true, text: alertText, card: { kind: 'alert', handle: post_.customerHandle, caption: post_.caption, stats: `${compact(post_.counters.likes)} dislikes · ${compact(post_.counters.comments)} comments · posted ${post_.timeAgo.toLowerCase()}` } });
+        post({ id: 'social-alert', author: agent('socialMedia'), urgent: true, text: alertText, card: { kind: 'alert', handle: post_.customerHandle, caption: post_.caption, stats: `${compact(post_.counters.likes)} dislikes · ${compact(post_.counters.comments)} comments · posted ${post_.timeAgo.toLowerCase()}`, media: 'sarahPhoto' } });
         // Raised when the run completes (the Start-investigation gate is open), not while the agent is still working.
         if (state.stage === 'socialMediaApproval') alert = { id: 'social-alert', title: 'Social Media Agent', body: `🚨 @${me}, a customer post about mouldy YummChips is going viral.` };
         return;
@@ -171,8 +174,8 @@ export function derive(state: DemoState, me: string, status: SessionStatus): Der
 
 function stageResult(stage: WorkflowStage): { text: string; card?: Card } | null {
   switch (stage) {
-    case 'identification': return { text: 'Found it. The batch code is printed on the packet in Sarah’s photo.', card: { kind: 'result', color: '#597EB2', title: 'Batch HLD-2407-A', lines: ['Matched to Line 4 · produced 08 July', 'Source: complaint photo + Production DB'] } };
-    case 'rca': return { text: 'Root cause and exposure confirmed.', card: { kind: 'result', color: '#769B58', title: 'Sealing temperature 160°C → 134°C', lines: ['18-minute drop on Line 4 · no quality hold', '40 FreshMart stores across 7 UK cities received the batch'] } };
+    case 'identification': return { text: 'Found it. The batch code is printed on the packet in Sarah’s photo.', card: { kind: 'result', color: '#597EB2', title: 'Batch HLD-2407-A', lines: ['Matched to Line 4 · produced 08 July', 'Source: complaint photo + Production DB'], media: 'batchLabel' } };
+    case 'rca': return { text: 'Root cause and exposure confirmed.', card: { kind: 'result', color: '#769B58', title: 'Sealing temperature 160°C → 134°C', lines: ['18-minute drop on Line 4 · no quality hold', '40 FreshMart stores across 7 UK cities received the batch'], media: 'factoryLog' } };
     default: return null;
   }
 }

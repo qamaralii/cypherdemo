@@ -1,14 +1,16 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { config } from '../../src/config';
-import { CHANNELS, derive, type Card, type ChannelId, type GateView, type IncidentReport, type Msg } from './derive';
+import { CHANNELS, derive, type Card, type ChannelId, type GateView, type IncidentReport, type Media, type Msg } from './derive';
 import hamperImg from './assets/hamper.jpg';
 import voucherImg from './assets/voucher.jpg';
+import sarahPostImg from './assets/sarah-post.jpg';
+import batchLabelImg from './assets/batch-label.jpg';
 import intugleLogo from './assets/intugle-icon.svg';
 import { useCompanionSession } from './session';
 import { mockStage, useMockSession } from './mock';
 import { buzz, keepAwake, playAlarm, playKnock, unlockAudio } from './alerts';
-import { channelOptions, compensationOptions, defaultCustomerDraft, defaultPublicDraft, orchestratorPlan, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
+import { channelOptions, compensationOptions, defaultCustomerDraft, defaultPublicDraft, orchestratorPlan, rcaLogExcerpt, regionOptions, storesForRegions, workflowStages, type Region } from '../../shared/workflow';
 import { AGENT_CHANNEL, DRAFT_FOR_GATE, type DemoState, type DraftField, type GateStage, type PhoneAction } from '../../shared/protocol';
 
 const WORKSPACE = 'YummChips';
@@ -290,10 +292,37 @@ function rich(text: string, me: string) {
   });
 }
 
+const PHOTOS: Partial<Record<Media, { src: string; alt: string; label: string }>> = {
+  sarahPhoto: { src: sarahPostImg, alt: 'Sarah’s photo: mouldy YummChips on a plate next to the open pack', label: 'sarah_mitchell_post.jpg' },
+  batchLabel: { src: batchLabelImg, alt: 'Close-up of the printed label on the pack: BATCH NO: HLD-2407-A', label: 'batch_label_crop.jpg' },
+};
+
+/** The laptop's graphic for an agent, as a Slack image (tap to enlarge) or, for the RCA log, a small rendered window. */
+function MediaView({ media }: { media: Media }) {
+  const [open, setOpen] = useState(false);
+  if (media === 'factoryLog') return <FactoryLog />;
+  const photo = PHOTOS[media]!;
+  return <>
+    <figure className={`sl-media ${media}`}><figcaption>{photo.label}</figcaption><button type="button" onClick={() => setOpen(true)} aria-label={`Enlarge ${photo.label}`}><img src={photo.src} alt={photo.alt} /></button></figure>
+    {open && <div className="sl-lightbox" role="dialog" aria-label={photo.label} onClick={() => setOpen(false)}><img src={photo.src} alt={photo.alt} /><button type="button" aria-label="Close">✕</button></div>}
+  </>;
+}
+
+function FactoryLog() {
+  return <div className="sl-factory-log" role="img" aria-label="Line 4 factory log: batch HLD-2407-A flagged twice for low sealing temperature, 134°C and 136°C">
+    <header><b>Factory log search</b><span>Line 4 · 08 July</span></header>
+    <div className="sl-factory-sub"><span>2 anomalies flagged</span><span>184,260 / 184,260</span></div>
+    {rcaLogExcerpt.map((row) => <div key={row.time} className={`sl-factory-row${row.anomaly ? ' anomaly' : ''}`}><i>{row.anomaly ? '!' : '›'}</i><time>{row.time}</time><b>{row.batch}</b><span>Seal {row.temperature}°C</span><em>{row.anomaly ? 'Anomaly' : 'Normal'}</em></div>)}
+  </div>;
+}
+
 function CardView({ card, onReport }: { card: Card; onReport: () => void }) {
   switch (card.kind) {
-    case 'alert': return <div className="sl-alert-card"><div className="sl-alert-head"><span className="sl-avatar tiny" style={{ background: '#8f342f' }}>S</span><b>@{card.handle}</b><em>Instagram</em></div><p>{card.caption}</p><small>{card.stats}</small></div>;
-    case 'result': return <div className="sl-attach" style={{ borderColor: card.color }}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>;
+    case 'alert': return <div className="sl-alert-card"><div className="sl-alert-head"><span className="sl-avatar tiny" style={{ background: '#8f342f' }}>S</span><b>@{card.handle}</b><em>Instagram</em></div><p>{card.caption}</p>{card.media && <MediaView media={card.media} />}<small>{card.stats}</small></div>;
+    case 'result': return <>
+      <div className="sl-attach" style={{ borderColor: card.color }}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>
+      {card.media && <MediaView media={card.media} />}
+    </>;
     case 'outcome': return <>
       <div className={`sl-attach outcome ${card.tone}`}><b>{card.title}</b>{card.lines.map((line) => <small key={line}>{line}</small>)}</div>
       {card.report && <div className="sl-actions sl-report-open"><button className="sl-btn" onClick={onReport}>📄 View your incident report</button></div>}

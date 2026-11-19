@@ -254,3 +254,28 @@ button:disabled { cursor: default; }
 @keyframes sl-fade { from { opacity: 0; } }
 @keyframes sl-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Agent graphics (mirrors of the laptop visuals) */
+.sl-media { display: grid; gap: 4px; max-width: 300px; margin: 8px 0 0; }
+.sl-media figcaption { color: var(--sl-faint); font-size: 12px; }
+.sl-media button { display: block; padding: 0; border: 1px solid #e2e2e2; border-radius: 8px; overflow: hidden; background: #f8f8f8; cursor: zoom-in; }
+.sl-media img { display: block; width: 100%; height: auto; }
+.sl-media.batchLabel { max-width: 260px; }
+.sl-alert-card .sl-media { max-width: none; margin: 4px 0; }
+.sl-lightbox { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: #000000e6; }
+.sl-lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+.sl-lightbox button { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; width: 36px; height: 36px; border: 0; border-radius: 50%; color: #fff; background: #ffffff26; font-size: 16px; }
+.sl-factory-log { max-width: 360px; margin-top: 8px; overflow: hidden; border: 1px solid #3a332c; border-radius: 9px; color: #e6ded3; background: #26231f; }
+.sl-factory-log header { display: flex; justify-content: space-between; gap: 10px; padding: 8px 11px; font-size: 12px; }
+.sl-factory-log header span { color: #a99f94; font-size: 10px; }
+.sl-factory-sub { display: flex; justify-content: space-between; gap: 10px; padding: 6px 11px; color: #b9ad9f; background: #1e1b18; font-size: 10px; }
+.sl-factory-sub span:first-child { color: #ff8278; font-weight: 700; }
+.sl-factory-row { display: grid; grid-template-columns: 8px 52px 72px auto minmax(0, 1fr); align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-top: 1px solid #ffffff0c; font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sl-factory-row > * { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sl-factory-row i, .sl-factory-row time { color: #a99f94; font-style: normal; }
+.sl-factory-row b { font-weight: 600; }
+.sl-factory-row em { justify-self: end; color: #769b58; font: 800 8px system-ui, sans-serif; text-transform: uppercase; }
+.sl-factory-row.anomaly { background: linear-gradient(90deg, #b84a4366, transparent); }
+.sl-factory-row.anomaly > * { color: #ff8278; }
+.sl-factory-row:not(.anomaly) { opacity: .55; }
+.sl-alert-card .sl-media figcaption { display: none; }

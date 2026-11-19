@@ -19,6 +19,7 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 4. **Social Media Agent run (19 s):** phone stays silent and the channel empty (`#general` gets a quiet "agents are on it" note).
 5. **Run complete:** after a settle delay, a push-style banner + alarm + vibration; the channel fills with the alert (@-mentions the visitor, Sarah's post card) and the agent's second message carrying **🔍 Start investigation** (gate `socialMediaApproval`).
 6. Each later agent: "typing…" while it works, then its request with Block-Kit-style controls, then (after approval) its result. **At most two messages per agent.**
+   - **Agent graphics** mirror the laptop visual inside the existing messages (no extra messages): Sarah's photo in the Social Media alert card, the cropped printed batch label (`BATCH NO: HLD-2407-A`) under the Identification result, and a dark "Factory log search" window with the two red anomaly rows (134°C, 136°C) under the RCA result. Photos open full screen on tap. The Planner and later agents have no graphic.
 7. Gates on the phone: Start investigation, Approve plan, response choice (3 radios), recall regions (checkboxes + Select all), public statement (✎ Edit + channel checkboxes), reply to Sarah (✎ Edit + Hamper/Voucher). Selections mirror live on the laptop.
 8. **Outcome:** Planner Agent posts the outcome card with **📄 View your incident report**. 2.5 s later an **optional work-email step** appears (Skip always available), then the **incident report** sheet.
 9. The session freezes at the outcome; the phone keeps its final channel and report. Replay (`R`) on the laptop creates a new session and QR.
@@ -44,7 +45,7 @@ Live and tested laptop ↔ phone against the real backend (branch `feature/slack
 | `companion/src/session.ts` | Join/resume via RPC, Realtime subscription, `send`, `submitEmail`, 15 s ended-status safety poll. |
 | `companion/src/alerts.ts` | Knock (approvals) and alarm (incident alert) via Web Audio, vibration, Screen Wake Lock. |
 | `companion/src/mock.ts` | Dev-only `?mock=` driver (no laptop/Supabase). |
-| `companion/src/assets/` | Compressed hamper/voucher JPEGs (~100 KB) and the Intugle logo SVG. |
+| `companion/src/assets/` | Compressed hamper/voucher JPEGs (~100 KB), Sarah's photo (`sarah-post.jpg`, 720 px, 88 KB), the batch-label crop (`batch-label.jpg`, region 1030,440 224×140 of `public/assets/social-post.png`), and the Intugle logo SVG. The RCA log rows come from `rcaLogExcerpt` in `shared/workflow.ts`. |
 | `supabase/migrations/` | `demo_sessions` table + RPCs; visitor email columns. |
 | `vite.companion.config.ts`, `tsconfig.companion.json` | Phone app build (root `companion/`, env from repo root, own Vite cache `node_modules/.vite-companion`). |
 
@@ -117,6 +118,7 @@ select decider_name, visitor_email, email_submitted_at from demo_sessions where 
 
 ## Historical Sessions
 - [2026-11-18 — Slack companion build](../sessions/2026-11-18-slack-companion.md)
+- [2026-11-19 — Agent graphics on the phone](../sessions/2026-11-19-companion-agent-graphics.md)
 
 ## Related Documentation
 - Decision record: [Slack companion architecture](../decisions/slack-companion-architecture.md)

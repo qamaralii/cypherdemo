@@ -63,3 +63,12 @@ export const defaultCustomerDraft = 'Hi Sarah, thank you for bringing this to ou
 export function storesForRegions(regions: Region[]) {
   return regions.reduce((total, region) => total + (regionOptions.find((item) => item.name === region)?.stores ?? 0), 0);
 }
+
+/** The few Line 4 log rows the RCA Agent shares on the phone: the two flagged sealing-temperature readings and their neighbours. */
+export const rcaLogExcerpt = [
+  { time: '08:08:14', batch: 'HLD-2407-B', temperature: 160, anomaly: false },
+  { time: '08:14:22', batch: 'HLD-2407-A', temperature: 134, anomaly: true },
+  { time: '08:14:28', batch: 'HLD-2409-B', temperature: 160, anomaly: false },
+  { time: '08:17:08', batch: 'HLD-2407-A', temperature: 136, anomaly: true },
+  { time: '08:17:35', batch: 'HLD-2410-B', temperature: 159, anomaly: false },
+] as const;
