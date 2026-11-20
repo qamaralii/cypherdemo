@@ -64,7 +64,7 @@ function JoinScreen({ busy, onJoin }: { busy: boolean; onJoin: (name: string) =>
       <input id="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your first name (optional)" autoComplete="given-name" maxLength={32} enterKeyHint="go" />
       <button type="submit" disabled={busy}>{busy ? 'Joining…' : 'Join the channel'}</button>
     </form>
-    <p className="join-foot">Part of the Intugle live demo at Cypher 2026. Fictional incident.</p>
+    <p className="join-foot">Part of the Intugle live demo. Fictional incident.</p>
   </main>;
 }
 
@@ -251,7 +251,7 @@ function Workspace({ state, status, me, connected, send, submitWhatsapp }: Sessi
 
     {drawer && <div className="sl-scrim" onClick={() => setDrawer(false)} />}
     <aside className={`sl-drawer${drawer ? ' open' : ''}`} aria-hidden={!drawer}>
-      <header><WorkspaceIcon small /><div><strong>{WORKSPACE}</strong><small>Cypher 2026 · Intugle demo</small></div></header>
+      <header><WorkspaceIcon small /><div><strong>{WORKSPACE}</strong><small>Intugle demo</small></div></header>
       <nav>
         <h2>Channels</h2>
         {(['general', 'agents'] as ChannelId[]).filter((id) => channels[id].visible).map((id) => <button key={id} className={`${id === current.id ? 'active' : ''}${unread(id) ? ' unread' : ''}`} onClick={() => { setActive(id); setDrawer(false); }}>
