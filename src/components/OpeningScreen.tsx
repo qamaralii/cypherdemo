@@ -59,7 +59,7 @@ export function OpeningScreen({ onStart, onStartInteraction }: Props) {
 
   return (
     <div ref={containerRef} className="scene-container landing-page">
-      <header className="landing-header"><img src={config.assets.logo} alt="Intugle" /><span><i />Cypher 2026</span></header>
+      <header className="landing-header"><img src={config.assets.logo} alt="Intugle" /></header>
       <main className="landing-main">
         <section className="landing-copy">
           <p className="landing-eyebrow">Agentic Alpha · Interactive walkthrough</p>
